@@ -5,6 +5,31 @@ const multiaddr = require('multiaddr')
 const WS = require('libp2p-websockets')
 const MPLEX = require('libp2p-mplex')
 
+function firstSuccess (errMsg, proms) {
+  return new Promise((resolve, reject) => {
+    let triggered = false
+    let promisesLeft = proms.length
+
+    function sucessOrFail (err, success) {
+      if (triggered) { return }
+
+      if (success) {
+        triggered = true
+        return resolve(success)
+      }
+
+      promisesLeft--
+
+      if (!promisesLeft) {
+        triggered = true
+        return reject(new Error(errMsg))
+      }
+    }
+
+    proms.forEach(prom => prom.then(res => successOrFail(res), successOrFail))
+  })
+}
+
 class MicroSwitch {
   constructor ({ muxers, transports, addresses, handler }) {
     this.transports = transports || [new WS()]
@@ -22,7 +47,7 @@ class MicroSwitch {
   }
 
   async dial (addr) {
-    this.transports // TODO: get first that succeeds or throw if none do
+    return firstSuccess('All transports failed to dial', this.transports
       .filter(transport => Boolean(transport.filter([addr]).length))
       .map(transport => new Promise((resolve, reject) => {
         const conn = transport.dial(addr, (err) => {
@@ -32,28 +57,29 @@ class MicroSwitch {
             resolve(conn)
           }
         })
-      }))
+      })))
   }
 
   async startListen () {
-    this.listeners = this.transports
-      .map(transport => [transport, transport.filter(this.addresses)])
-      .filter(res => Boolean(res[1].length))
-      .map(res => {
-        const [transport, addresses] = res
-        return addresses.map(address => new Promise((resolve, reject) => {
-          const listener = transport.createListener(this.handler.bind(this))
-          listener.listen(address, (err) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(address)
-            }
-          })
-        }))
-      })
-      .reduce((a, b) => a.concat(b), [])
-    await Promise.all(this.listeners)
+    this.listeners = await Promise.all(
+      this.transports
+        .map(transport => [transport, transport.filter(this.addresses)])
+        .filter(res => Boolean(res[1].length))
+        .map(res => {
+          const [transport, addresses] = res
+          return addresses.map(address => new Promise((resolve, reject) => {
+            const listener = transport.createListener(this.handler.bind(this))
+            listener.listen(address, (err) => {
+              if (err) {
+                reject(err)
+              } else {
+                resolve(address)
+              }
+            })
+          }))
+        })
+        .reduce((a, b) => a.concat(b), [])
+    )
   }
 
   async stopListen () {

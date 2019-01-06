@@ -4,7 +4,7 @@ const MicroSwitch = require('../micro-switch')
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Error} = require('../rpc/proto')
+const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, DialResponse, Error} = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -45,7 +45,7 @@ class Client {
     const shake = stream.handshake
     const rpc = LP.wrap(shake, {push: shake.write})
 
-    const {target} = rpc.readProto(DialRequest)
+    const {target} = await rpc.readProto(DialRequest)
     const targetB58 = new ID(target).toB58String()
 
     const targetPeer = this.server.network[targetB58]
@@ -73,7 +73,7 @@ class Server {
   constructor ({ transports, addresses, muxers }) {
     this.switch = new MicroSwitch({ transports, addresses, muxers, handler: this.handler.bind(this) })
 
-    this.clients = {}
+    this.network = {}
   }
 
   handler (conn) {
@@ -113,7 +113,7 @@ class Server {
   }
 
   addToNetwork (client) {
-
+    this.network[client.id.toB58String()] = client
   }
 
   async start () {
