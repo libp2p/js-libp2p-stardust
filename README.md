@@ -4,8 +4,8 @@ A better ws-star implementation
 
 # Todo
 
- - [ ] Integrate as libp2p transport
- - [ ] Add discovery
+ - [ ] Integrate as libp2p transport (WIP)
+ - [x] Add discovery
  - [ ] Split server into it's own repo
 
 ## Why?
