@@ -77,6 +77,8 @@ class Server {
   }
 
   async handler (conn) {
+    log('new connection')
+
     const muxed = await this.switch.wrapInMuxer(conn, true)
     muxed.newStream(async (err, conn) => {
       if (err) {
@@ -86,11 +88,15 @@ class Server {
       const rpc = LP(conn)
 
       try {
+        log('performing challenge')
+
         const {random, peerID} = await rpc.readProto(JoinInit)
-        const id = await prom(cb => ID.createFromJSON(peerID))
+        const id = await prom(cb => ID.createFromJSON(peerID, cb))
+
+        log('got rand')
 
         const xorSecret = crypto.randomBytes(128)
-        const xorEncrypted = prom(cb => id.encrypt(xorSecret, cb))
+        const xorEncrypted = await prom(cb => id.pubKey.encrypt(xorSecret, cb))
 
         rpc.writeProto(JoinChallenge, {xor: xorEncrypted})
 
@@ -103,6 +109,8 @@ class Server {
         }
 
         rpc.writeProto(JoinVerify, {})
+
+        log('adding to network')
 
         this.addToNetwork(new Client({muxed, rpc, id, server: this}))
       } catch (e) {

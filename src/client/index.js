@@ -4,7 +4,7 @@ const MicroSwitch = require('../micro-switch')
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, DialResponse, Error} = require('../rpc/proto')
+const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, DialResponse, Error: E} = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -51,24 +51,32 @@ class Connection {
     if (this.connected) { return }
     this.address = address
 
+    log('connecting to %s', address)
+
     let conn = await this.client.switch.dial(address)
     const muxed = await this.client.switch.wrapInMuxer(conn, false)
 
-    conn = await prom(cb => muxed.newStream(cb))
+    conn = await prom(cb => muxed.once('stream', s => cb(null, s)))
     const rpc = LP(conn)
+
+    log('performing challenge')
 
     const random = crypto.randomBytes(128)
     rpc.writeProto(JoinInit, {random, peerID: this.client.id.toJSON()})
 
+    log('sent rand')
+
     const {error, xor: xorEncrypted} = await rpc.readProto(JoinChallenge)
     if (error) { translateAndThrow(error) }
-    const xorSecret = await prom(cb => this.client.id.privkey.decrypt(xorEncrypted, cb))
+    const xorSecret = await prom(cb => this.client.id.privKey.decrypt(xorEncrypted, cb))
 
     const solution = xor(random, xorSecret)
     rpc.writeProto(JoinChallengeSolution, {solution})
 
     const {error: error2} = await rpc.readProto(JoinVerify)
     if (error2) { translateAndThrow(error) }
+
+    log('connected')
 
     this.connected = true // TODO: handle dynamic disconnects
     this.muxed = muxed

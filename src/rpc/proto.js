@@ -12,8 +12,8 @@ enum Error {
 }
 
 message PeerID {
-  bytes id = 1;
-  bytes pubKey = 2;
+  string id = 1;
+  string pubKey = 2;
 }
 
 message JoinInit {

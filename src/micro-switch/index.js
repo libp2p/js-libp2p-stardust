@@ -6,6 +6,9 @@ const multistream = require('multistream-select')
 const WS = require('libp2p-websockets')
 const MPLEX = require('libp2p-mplex')
 
+const debug = require('debug')
+const log = debug('libp2p:stardust:microswitch')
+
 function firstSuccess (errMsg, proms) {
   return new Promise((resolve, reject) => {
     let triggered = false
@@ -33,9 +36,12 @@ class MicroSwitch {
     this.addresses = addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
     this.handler = handler || console.log
 
+    log('creating microswitch with %o transport(s), %o muxer(s) and %o address(es)', this.transports.length, this.muxers.length, this.addresses.length)
+
     this.msListener = new multistream.Listener()
     this.muxers.forEach(muxer => {
       this.msListener.addHandler(muxer.multicodec, (protocol, conn) => {
+        log('adding handler for %s', muxer.multicodec)
         const muxed = muxer.listener(conn)
         conn.info.info.msCallback(muxed)
       })
@@ -47,6 +53,7 @@ class MicroSwitch {
    * @returns MuxedConn
    */
   wrapInMuxer (conn, isServer) {
+    log('muxer wrap (isServer=%o)', isServer)
     return new Promise((resolve, reject) => {
       if (isServer) {
         conn.msCallback = resolve
@@ -70,6 +77,7 @@ class MicroSwitch {
   }
 
   async dial (addr) {
+    log('dialing %s', String(addr))
     return firstSuccess('All transports failed to dial', this.transports
       .filter(transport => Boolean(transport.filter([addr]).length))
       .map(transport => new Promise((resolve, reject) => {
@@ -91,6 +99,7 @@ class MicroSwitch {
         .map(res => {
           const [transport, addresses] = res
           return addresses.map(address => new Promise((resolve, reject) => {
+            log('listening on %s', String(address))
             const listener = transport.createListener(this.handler.bind(this))
             listener.listen(address, (err) => {
               if (err) {

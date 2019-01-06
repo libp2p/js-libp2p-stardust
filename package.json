@@ -24,6 +24,7 @@
   "author": "Maciej Krüger <mkg20001@gmail.com>",
   "license": "MPL-2.0",
   "dependencies": {
+    "libp2p-crypto": "github:libp2p/js-libp2p-crypto#feat/rsa-enc-dec",
     "libp2p-mplex": "^0.8.4",
     "libp2p-websockets": "^0.12.0",
     "multistream-select": "^0.14.3",
