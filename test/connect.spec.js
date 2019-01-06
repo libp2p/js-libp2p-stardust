@@ -1,6 +1,6 @@
 'use strict'
 
-const Client = require('../src/client')
+const Client = require('..')
 const ID = require('peer-id')
 const IDJSON = require('./id.json')
 const multiaddr = require('multiaddr')
@@ -22,7 +22,7 @@ describe('connect', () => {
 
   it('should be creatable', () => {
     client = new Client({id})
-    conn = client.createConnection(() => {})
+    conn = client.createListener(() => {})
   })
 
   it('should connect to server', async () => conn.connect(SERVER_URL))

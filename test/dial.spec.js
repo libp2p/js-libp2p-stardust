@@ -1,6 +1,6 @@
 'use strict'
 
-const Client = require('../src/client')
+const Client = require('..')
 const ID = require('peer-id')
 const IDJSON = [require('./id.json'), require('./id2.json')]
 const multiaddr = require('multiaddr')
@@ -21,7 +21,7 @@ describe('dial', () => {
 
   it('connect all clients', async () => {
     clients = ids.map(id => new Client({id}))
-    conns = clients.map(client => client.createConnection(conn => pull(conn, conn)))
+    conns = clients.map(client => client.createListener(conn => pull(conn, conn)))
     await Promise.all(conns.map(conn => conn.connect(SERVER_URL)))
     clients.forEach(c => (c.addr = multiaddr('/ipfs/' + c.id.toB58String())))
   })
@@ -39,6 +39,10 @@ describe('dial', () => {
   })
 
   it('client1 should discover client2', function (done) { // TODO: fix this
-    this.timeout(10000)
+    this.timeout(15000)
+    clients[0].discovery.once('peer', (pi) => {
+      require('assert')(String(pi.multiaddrs.toArray()[0]) === String(SERVER_URL) + String(clients[1].addr))
+      done()
+    })
   })
 })

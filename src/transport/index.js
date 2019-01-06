@@ -10,6 +10,7 @@ const Connection = require('interface-connection').Connection
 const once = require('once')
 const debug = require('debug')
 const log = debug('libp2p:stardust')
+const EE = require('events').EventEmitter
 
 function noop () {}
 
@@ -29,6 +30,15 @@ class Stardust {
   constructor ({ transports, muxers, id }) {
     this.switch = new MicroSwitch({ transports, addresses: [], muxers })
     this.id = id
+
+    this.discovery = new EE()
+    this.discovery.tag = 'stardust'
+    this.discovery.start = (callback) => {
+      setImmediate(callback)
+    }
+    this.discovery.stop = (callback) => {
+      setImmediate(callback)
+    }
 
     this.connections = {}
   }

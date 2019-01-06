@@ -3,7 +3,7 @@
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, Error: E, ErrorTranslations} = require('../rpc/proto')
+const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, ErrorTranslations} = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -11,6 +11,7 @@ const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
 
 const crypto = require('crypto')
 const ID = require('peer-id')
+const PeerInfo = require('peer-info')
 
 const debug = require('debug')
 const log = debug('libp2p:stardust:client')
@@ -28,10 +29,19 @@ class Connection {
   async readDiscovery () {
     const addrBase = this.address.decapsulate('p2p-websocket-star')
     const {ids} = await this.rpc.readProto(Discovery)
+    log('reading discovery')
     ids
-      .map(id => new ID(id).toB58String())
-      .filter(id => id !== this.client.id.toB58String())
-      .map(id => addrBase.encapsulate('/p2p-websocket-star/ipfs/' + id))
+      .map(id => {
+        const pi = new PeerInfo(new ID(id))
+        if (pi.id.toB58String() === this.client.id.toB58String()) return
+        pi.multiaddrs.add(addrBase.encapsulate('/p2p-websocket-star/ipfs/' + pi.id.toB58String()))
+
+        return pi
+      })
+      .filter(Boolean)
+      .forEach(pi => this.client.discovery.emit('peer', pi))
+
+    this.readDiscovery()
   }
 
   async connect (address) {
@@ -70,7 +80,6 @@ class Connection {
     this.rpc = rpc
     muxed.on('stream', this.handler)
     this.readDiscovery()
-    setInterval(this.readDiscovery.bind(this), 10 * 1000)
   }
 
   async dial (addr) {

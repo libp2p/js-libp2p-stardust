@@ -2,7 +2,7 @@
   "name": "libp2p-stardust",
   "version": "0.0.1",
   "description": "Basically ws-star but without the bugs",
-  "main": "index.js",
+  "main": "src/transport/index.js",
   "scripts": {
     "lint": "aegir lint",
     "build": "aegir build",
@@ -29,6 +29,7 @@
     "libp2p-websockets": "^0.12.0",
     "multistream-select": "^0.14.3",
     "peer-id": "^0.12.1",
+    "peer-info": "^0.15.0",
     "protons": "^1.0.1"
   },
   "devDependencies": {
