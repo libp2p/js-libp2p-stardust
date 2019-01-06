@@ -10,23 +10,18 @@ function firstSuccess (errMsg, proms) {
     let triggered = false
     let promisesLeft = proms.length
 
-    function sucessOrFail (err, success) {
-      if (triggered) { return }
-
-      if (success) {
+    proms.forEach(prom => prom.then(res => {
+      if (!triggered) {
         triggered = true
-        return resolve(success)
+        resolve(res)
       }
-
+    }, () => {
       promisesLeft--
-
-      if (!promisesLeft) {
+      if (!triggered && !promisesLeft) {
         triggered = true
-        return reject(new Error(errMsg))
+        reject(new Error(errMsg))
       }
-    }
-
-    proms.forEach(prom => prom.then(res => successOrFail(res), successOrFail))
+    }))
   })
 }
 
@@ -34,7 +29,7 @@ class MicroSwitch {
   constructor ({ muxers, transports, addresses, handler }) {
     this.transports = transports || [new WS()]
     this.muxers = muxers || [MPLEX]
-    this.addresses = addresses || [multiaddr('/ip6/::/tcp/5892')]
+    this.addresses = addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
     this.handler = handler || console.log
   }
 

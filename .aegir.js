@@ -5,7 +5,7 @@ let server
 
 function pre (done) {
   server = new Server({})
-  server.start.then(done, done)
+  server.start().then(done, done)
 }
 
 function post (done) {

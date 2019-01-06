@@ -35,6 +35,10 @@ class Client {
 
     this.servers = {}
   }
+
+  createConnection (handler) {
+    return new Connection(this, handler)
+  }
 }
 
 class Connection {
@@ -48,7 +52,7 @@ class Connection {
     this.address = address
 
     let conn = await this.client.switch.dial(address)
-    const muxed = await this.client.swtich.wrapInMuxer(conn, false)
+    const muxed = await this.client.switch.wrapInMuxer(conn, false)
 
     conn = await prom(cb => muxed.newStream(cb))
     const rpc = LP(conn)
@@ -77,3 +81,5 @@ class Connection {
      */
   }
 }
+
+module.exports = Client
