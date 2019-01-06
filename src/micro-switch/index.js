@@ -1,6 +1,7 @@
 'use strict'
 
 const multiaddr = require('multiaddr')
+const multistream = require('multistream-select')
 
 const WS = require('libp2p-websockets')
 const MPLEX = require('libp2p-mplex')
@@ -31,14 +32,41 @@ class MicroSwitch {
     this.muxers = muxers || [MPLEX]
     this.addresses = addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
     this.handler = handler || console.log
+
+    this.msListener = new multistream.Listener()
+    this.muxers.forEach(muxer => {
+      this.msListener.addHandler(muxer.multicodec, (protocol, conn) => {
+        const muxed = muxer.listener(conn)
+        conn.info.info.msCallback(muxed)
+      })
+    })
   }
 
   /*
    * Wraps a connection in a muxer
    * @returns MuxedConn
    */
-  async wrapInMuxer (conn, isServer) {
+  wrapInMuxer (conn, isServer) {
+    return new Promise((resolve, reject) => {
+      if (isServer) {
+        conn.msCallback = resolve
+        this.msListener.handle(conn, (err) => {
+          if (err) { return reject(err) }
+        })
+      } else {
+        const msDialer = new multistream.Dialer()
+        msDialer.handle(conn, (err) => {
+          if (err) { return reject(err) }
 
+          const firstMuxer = this.muxers[0] // TODO: iterate or do ls first
+          msDialer.select(firstMuxer.multicodec, (err, conn) => {
+            if (err) { return reject(err) }
+            const muxed = firstMuxer.dialer(conn)
+            return resolve(muxed)
+          })
+        })
+      }
+    })
   }
 
   async dial (addr) {

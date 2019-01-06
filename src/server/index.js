@@ -76,8 +76,8 @@ class Server {
     this.network = {}
   }
 
-  handler (conn) {
-    const muxed = this.switch.wrapInMuxer(conn, true)
+  async handler (conn) {
+    const muxed = await this.switch.wrapInMuxer(conn, true)
     muxed.newStream(async (err, conn) => {
       if (err) {
         return log(err)
