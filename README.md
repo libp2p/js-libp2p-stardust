@@ -37,6 +37,11 @@ The client now decrypts the salt and builds a sha512 hash out of the random stri
 The server also computes this hash and compares it to the client's solution
 If both match, the server adds the client to the network, otherwise it responds with an error
 <-[ JoinVerify{ error? } ]--------------------------------------------------------------
+
+The server periodically sends the list of peerIDs that are currently online back to the client
+By default every 10s or whenever a client joins
+This is also used as a ping by the client
+<-[ Discovery{ ids: [<bytes>, ...] } ]--------------------------------------------------
 ```
 
 ## Dialing flow
