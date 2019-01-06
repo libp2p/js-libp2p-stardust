@@ -76,9 +76,26 @@ class Connection {
   }
 
   async dial (addr) {
-    /*
-     - TODO: get peer id, open new conn via muxed, do handshake, do dial, forward
-     */
+    const id = addr.getPeerId()
+    const _id = ID.createFromB58String(id)._id
+
+    const conn = await prom(cb => this.muxed.newStream(cb))
+
+    const stream = handshake()
+    pull(
+      conn,
+      stream,
+      conn
+    )
+
+    const shake = stream.handshake
+    const rpc = LP.wrap(shake, {push: shake.write})
+
+    rpc.writeProto(DialRequest, {target: _id})
+    const {error} = await rpc.readProto(DialResponse)
+    if (error) { translateAndThrow(error) }
+
+    return shake.rest()
   }
 }
 

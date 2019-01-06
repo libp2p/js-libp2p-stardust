@@ -105,7 +105,7 @@ class MicroSwitch {
               if (err) {
                 reject(err)
               } else {
-                resolve(address)
+                resolve(listener)
               }
             })
           }))

@@ -119,6 +119,10 @@ class Server {
   async start () {
     await this.switch.startListen()
   }
+
+  async stop () {
+    await this.switch.stopListen()
+  }
 }
 
 module.exports = Server
