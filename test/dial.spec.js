@@ -4,7 +4,7 @@ const Client = require('../src/client')
 const ID = require('peer-id')
 const IDJSON = [require('./id.json'), require('./id2.json')]
 const multiaddr = require('multiaddr')
-const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws')
+const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-websocket-star')
 const pull = require('pull-stream/pull')
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -36,5 +36,9 @@ describe('dial', () => {
       )
     )
     require('assert')(String(res[0]) === 'hello')
+  })
+
+  it('client1 should discover client2', function (done) { // TODO: fix this
+    this.timeout(10000)
   })
 })

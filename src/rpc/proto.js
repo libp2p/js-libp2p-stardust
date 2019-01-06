@@ -34,6 +34,10 @@ message JoinVerify {
   Error error = 1;
 }
 
+message Discovery {
+  repeated bytes ids = 1;
+}
+
 message DialRequest {
   bytes target = 1;
 }

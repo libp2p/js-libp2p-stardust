@@ -14,6 +14,11 @@ function firstSuccess (errMsg, proms) {
     let triggered = false
     let promisesLeft = proms.length
 
+    if (!promisesLeft) {
+      triggered = true
+      reject(new Error(errMsg)) // no promises, instant failure
+    }
+
     proms.forEach(prom => prom.then(res => {
       if (!triggered) {
         triggered = true

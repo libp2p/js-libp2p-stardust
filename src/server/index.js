@@ -4,7 +4,7 @@ const MicroSwitch = require('../micro-switch')
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, DialResponse, Error} = require('../rpc/proto')
+const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, Error} = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -70,6 +70,8 @@ class Server {
     this.switch = new MicroSwitch({ transports, addresses, muxers, handler: this.handler.bind(this) })
 
     this.network = {}
+    this.networkArray = []
+    this._cachedDiscovery = Buffer.from('')
   }
 
   async handler (conn) {
@@ -118,13 +120,29 @@ class Server {
 
   addToNetwork (client) {
     this.network[client.id.toB58String()] = client
+    this.update()
+    this.broadcastDiscovery()
+  }
+
+  update () {
+    this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
+    this._cachedDiscovery = Discovery.encode({ids: this.networkArray.map(client => client.id._id)})
+  }
+
+  broadcastDiscovery () {
+    log('broadcasting discovery to %o client(s)', this.networkArray.length)
+    this.networkArray.forEach(client => {
+      client.rpc.write(this._cachedDiscovery)
+    })
   }
 
   async start () {
+    this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
     await this.switch.startListen()
   }
 
   async stop () {
+    clearInterval(this.discoveryInterval)
     await this.switch.stopListen()
   }
 }
