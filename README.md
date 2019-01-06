@@ -13,7 +13,7 @@ ws-star is still a mess, rendezvous is still a work in progress and I just figur
 ## Registration flow
 
 ```
-Client											Server
+Client                                                                                  Server
 
 The client connects
 Both the server and the client negotiate a muxer to use using multistream-select
@@ -36,17 +36,16 @@ If both match, the server adds the client to the network, otherwise it responds 
 ## Dialing flow
 
 ```
-Client A				Server					Client B
+Client A                                Server                                  Client B
 
 The client opens a muxed connection and sends the peerID of the target over that connection
 --[ *opens connection* ]-------------->
 --[ DialRequest{ target: <bytes> } ]-->
 
 The server verifies if the client is online and responds with either an error or opens a connection to the other and forwards that over the existing connection
-					--[ *opens connection* ]--------------->
+                                        --[ *opens connection* ]--------------->
 <-[ DialRequest{ error? } ]------------
 ---------------------------------------->-[ *forwarded connection* ]----------->
 
 After that the normal libp2p dialing flow is happening between A and B
-
 ```
