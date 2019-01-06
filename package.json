@@ -1,0 +1,23 @@
+{
+  "name": "libp2p-stardust",
+  "version": "0.0.1",
+  "description": "Basically ws-star but without the bugs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ws-star",
+    "rendezvous",
+    "relay"
+  ],
+  "author": "Maciej Krüger <mkg20001@gmail.com>",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "libp2p-mplex": "^0.8.4",
+    "libp2p-websockets": "^0.12.0",
+    "multistream-select": "^0.14.3",
+    "peer-id": "^0.12.1",
+    "protons": "^1.0.1"
+  }
+}
