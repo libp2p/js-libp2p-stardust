@@ -38,15 +38,16 @@ class Client {
 }
 
 class Connection {
-  constructor (client, address) {
+  constructor (client, handler) {
     this.client = client
-    this.address = address
+    this.handler = handler
   }
 
-  async connect () {
+  async connect (address) {
     if (this.connected) { return }
+    this.address = address
 
-    let conn = await this.client.switch.dial(this.address)
+    let conn = await this.client.switch.dial(address)
     const muxed = await this.client.swtich.wrapInMuxer(conn, false)
 
     conn = await prom(cb => muxed.newStream(cb))
