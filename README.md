@@ -55,3 +55,20 @@ The server verifies if the client is online and responds with either an error or
 
 After that the normal libp2p dialing flow is happening between A and B
 ```
+
+# Choices and explanations
+
+## Why not use libp2p's built-in switch instead of microswitch?
+
+- Complexity: Dynamic injection isn't a thing yet, and any other solution would be a complete mess
+- Performance: As stardust will mainly be used over wss:// there is no need to add another layer of SECIO on top of that (connections between peers are verified and protected by SECIO anyways)
+
+## Crypto challenge
+
+- Using a signature challenge would make the client sign anything the server gives it
+- Using a decryption challenge would make the client decrypt anything the server gives it
+- Using a hash-based decryption challenge solves those problems as the decrypted data is hashed together with random data so that even if the client were to be tricked into decrypting secrets, those would come back as an useless hash to the attacker
+
+## Not using PoW for registrations like rendezvous
+
+That's why it takes forever to be developed ;)
