@@ -35,7 +35,7 @@ message JoinVerify {
 }
 
 message DialRequest {
-  bytes id = 1;
+  bytes target = 1;
 }
 
 message DialResponse {

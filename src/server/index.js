@@ -34,11 +34,15 @@ class Client {
       conn
     )
 
+    log('incomming dial')
+
     const shake = stream.handshake
-    const rpc = LP.wrap(shake, {push: shake.write})
+    const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
 
     const {target} = await rpc.readProto(DialRequest)
     const targetB58 = new ID(target).toB58String()
+
+    log('dial from %s to %s', this.id.toB58String(), targetB58)
 
     const targetPeer = this.server.network[targetB58]
 

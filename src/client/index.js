@@ -73,11 +73,14 @@ class Connection {
     this.connected = true // TODO: handle dynamic disconnects
     this.muxed = muxed
     this.rpc = rpc
+    muxed.on('stream', this.handler)
   }
 
   async dial (addr) {
     const id = addr.getPeerId()
     const _id = ID.createFromB58String(id)._id
+
+    log('dialing %s', id)
 
     const conn = await prom(cb => this.muxed.newStream(cb))
 
@@ -89,7 +92,7 @@ class Connection {
     )
 
     const shake = stream.handshake
-    const rpc = LP.wrap(shake, {push: shake.write})
+    const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
 
     rpc.writeProto(DialRequest, {target: _id})
     const {error} = await rpc.readProto(DialResponse)

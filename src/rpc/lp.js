@@ -34,3 +34,18 @@ module.exports.wrap = (read, write) => {
 
   return S
 }
+
+module.exports.writeWrap = (shakeWrite) => {
+  return {
+    push: data => {
+      pull(
+        pull.values([data]),
+        lp.encode(),
+        pull.collect((err, res) => {
+          if (err) return
+          res.forEach(shakeWrite)
+        })
+      )
+    }
+  }
+}
