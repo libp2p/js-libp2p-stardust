@@ -2,6 +2,12 @@
 
 A better ws-star implementation
 
+# Todo
+
+ - [ ] Integrate as libp2p transport
+ - [ ] Add discovery
+ - [ ] Split server into it's own repo
+
 ## Why?
 
 ws-star is still a mess, rendezvous is still a work in progress and I just figured that it would be a good idea to do something about that
