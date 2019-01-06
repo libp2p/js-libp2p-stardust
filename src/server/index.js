@@ -71,7 +71,7 @@ class Server {
 
     this.network = {}
     this.networkArray = []
-    this._cachedDiscovery = Buffer.from('')
+    this._emptyCachedDiscovery = this._cachedDiscovery = Buffer.from('01', 'hex')
   }
 
   async handler (conn) {
@@ -126,7 +126,7 @@ class Server {
 
   update () {
     this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
-    this._cachedDiscovery = Discovery.encode({ids: this.networkArray.map(client => client.id._id)})
+    this._cachedDiscovery = this.networkArray.length ? Discovery.encode({ids: this.networkArray.map(client => client.id._id)}) : this._emptyCachedDiscovery
   }
 
   broadcastDiscovery () {

@@ -16,21 +16,48 @@ const PeerInfo = require('peer-info')
 const debug = require('debug')
 const log = debug('libp2p:stardust:client')
 
+const EventEmitter = require('events').EventEmitter
+
 function translateAndThrow (eCode) {
   throw new Error(ErrorTranslations[eCode])
 }
 
-class Connection {
+class Connection extends EventEmitter {
   constructor (client, handler) {
+    super()
     this.client = client
     this.handler = handler
   }
 
-  async readDiscovery () {
+  async _readDiscovery () {
     const addrBase = this.address.decapsulate('p2p-websocket-star')
-    const {ids} = await this.rpc.readProto(Discovery)
+
+    let resp
+
+    try {
+      resp = await this.rpc.readProto(Discovery)
+    } catch (e) {
+      log('failed to read discovery: %s', e.stack)
+      log('assume disconnected!')
+
+      this.connected = false
+      this.rpc = null
+      this.muxed = null
+
+      log('reconnecting')
+
+      try {
+        await this.connect(this.address)
+        log('reconnected!')
+      } catch (e) {
+        log('reconnect failed: %s', e.stack)
+      }
+
+      return
+    }
+
     log('reading discovery')
-    ids
+    resp.ids
       .map(id => {
         const pi = new PeerInfo(new ID(id))
         if (pi.id.toB58String() === this.client.id.toB58String()) return
@@ -41,10 +68,10 @@ class Connection {
       .filter(Boolean)
       .forEach(pi => this.client.discovery.emit('peer', pi))
 
-    this.readDiscovery()
+    this._readDiscovery() // this will wait for 30s. usually after 10s response should come in, but always check because join events trigger this as well
   }
 
-  async connect (address) {
+  async listen (address) {
     if (this.connected) { return }
     this.address = address
 
@@ -75,14 +102,17 @@ class Connection {
 
     log('connected')
 
-    this.connected = true // TODO: handle dynamic disconnects
+    this.connected = true
     this.muxed = muxed
     this.rpc = rpc
+
     muxed.on('stream', this.handler)
     this.readDiscovery()
   }
 
   async dial (addr) {
+    if (!this.connected) { throw new Error('Server not online!') }
+
     const id = addr.getPeerId()
     const _id = ID.createFromB58String(id)._id
 
