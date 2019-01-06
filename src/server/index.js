@@ -8,15 +8,7 @@ const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, 
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
-const xor = (a, b) => {
-  const r = Buffer.allocUnsafe(a.length)
-
-  for (var i = 0; i < a.length; i++) {
-    r[i] = a[i] ^ b[i]
-  }
-
-  return r
-}
+const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
 
 const crypto = require('crypto')
 const ID = require('peer-id')
@@ -95,12 +87,12 @@ class Server {
 
         log('got rand')
 
-        const xorSecret = crypto.randomBytes(128)
-        const xorEncrypted = await prom(cb => id.pubKey.encrypt(xorSecret, cb))
+        const saltSecret = crypto.randomBytes(128)
+        const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
 
-        rpc.writeProto(JoinChallenge, {xorEncrypted})
+        rpc.writeProto(JoinChallenge, {saltEncrypted})
 
-        const solution = xor(random, xorSecret)
+        const solution = sha5(random, saltSecret)
 
         const {solution: solutionClient} = await rpc.readProto(JoinChallengeSolution)
 

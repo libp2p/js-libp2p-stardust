@@ -23,11 +23,11 @@ message JoinInit {
 
 message JoinChallenge {
   Error error = 1;
-  bytes xorEncrypted = 2;
+  bytes saltEncrypted = 2;
 }
 
 message JoinChallengeSolution {
-  bytes solution = 1; // xor(random128, decrypt(xorEncrypted, id.priv))
+  bytes solution = 1; // sha5(random128, decrypt(saltEncrypted, id.priv))
 }
 
 message JoinVerify {
