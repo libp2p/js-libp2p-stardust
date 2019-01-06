@@ -4,7 +4,7 @@ const MicroSwitch = require('../micro-switch')
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, DialResponse, Error: E} = require('../rpc/proto')
+const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, DialRequest, DialResponse, Error: E, ErrorTranslations} = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -25,7 +25,7 @@ const debug = require('debug')
 const log = debug('libp2p:stardust:client')
 
 function translateAndThrow (eCode) {
-  throw new Error('Some error')
+  throw new Error(ErrorTranslations[eCode])
 }
 
 class Client {
@@ -62,11 +62,11 @@ class Connection {
     log('performing challenge')
 
     const random = crypto.randomBytes(128)
-    rpc.writeProto(JoinInit, {random, peerID: this.client.id.toJSON()})
+    rpc.writeProto(JoinInit, {random128: random, peerID: this.client.id.toJSON()})
 
     log('sent rand')
 
-    const {error, xor: xorEncrypted} = await rpc.readProto(JoinChallenge)
+    const {error, xorEncrypted} = await rpc.readProto(JoinChallenge)
     if (error) { translateAndThrow(error) }
     const xorSecret = await prom(cb => this.client.id.privKey.decrypt(xorEncrypted, cb))
 
@@ -74,7 +74,7 @@ class Connection {
     rpc.writeProto(JoinChallengeSolution, {solution})
 
     const {error: error2} = await rpc.readProto(JoinVerify)
-    if (error2) { translateAndThrow(error) }
+    if (error2) { translateAndThrow(error2) }
 
     log('connected')
 

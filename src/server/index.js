@@ -90,7 +90,7 @@ class Server {
       try {
         log('performing challenge')
 
-        const {random, peerID} = await rpc.readProto(JoinInit)
+        const {random128: random, peerID} = await rpc.readProto(JoinInit)
         const id = await prom(cb => ID.createFromJSON(peerID, cb))
 
         log('got rand')
@@ -98,13 +98,13 @@ class Server {
         const xorSecret = crypto.randomBytes(128)
         const xorEncrypted = await prom(cb => id.pubKey.encrypt(xorSecret, cb))
 
-        rpc.writeProto(JoinChallenge, {xor: xorEncrypted})
+        rpc.writeProto(JoinChallenge, {xorEncrypted})
 
         const solution = xor(random, xorSecret)
 
         const {solution: solutionClient} = await rpc.readProto(JoinChallengeSolution)
 
-        if (!Buffer.compare(solution, solutionClient)) {
+        if (solution.toString('hex') !== solutionClient.toString('hex')) {
           return rpc.writeProto(JoinVerify, {error: Error.E_INCORRECT_SOLUTION}) // TODO: connection close
         }
 

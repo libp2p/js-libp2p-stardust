@@ -43,3 +43,12 @@ message DialResponse {
 }
 
 `)
+
+const E = module.exports.Error
+
+module.exports.ErrorTranslations = {
+  [E.OK]: 'OK',
+  [E.E_RAND_LENGTH]: 'random128 field should be exactly 128 bytes long!',
+  [E.E_INCORRECT_SOLUTION]: 'The challenge solution provided by the client was incorrect',
+  [E.E_GENERIC]: 'Internal Server Error'
+}
