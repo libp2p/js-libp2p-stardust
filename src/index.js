@@ -1,7 +1,7 @@
 'use strict'
 
-const MicroSwitch = require('../micro-switch/')
-const StardustConnection = require('../client/connection')
+const MicroSwitch = require('./micro-switch')
+const StardustConnection = require('./connection')
 const mafmt = require('mafmt')
 const withIs = require('class-is')
 const includes = require('lodash.includes')
