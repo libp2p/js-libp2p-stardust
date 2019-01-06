@@ -25,5 +25,5 @@ describe('connect', () => {
     conn = client.createListener(() => {})
   })
 
-  it('should connect to server', async () => conn.connect(SERVER_URL))
+  it('should connect to server', async () => conn._listen(SERVER_URL))
 })

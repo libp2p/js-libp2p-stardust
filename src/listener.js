@@ -22,11 +22,33 @@ function translateAndThrow (eCode) {
   throw new Error(ErrorTranslations[eCode])
 }
 
-class Connection extends EventEmitter {
+function noop () { }
+
+class Listener extends EventEmitter {
   constructor (client, handler) {
     super()
     this.client = client
     this.handler = handler
+  }
+
+  listen (ma, callback) {
+    if (!callback) {
+      callback = noop
+    }
+
+    this._listen(ma).then(() => {
+      this.emit('listening')
+      callback()
+    }, err => {
+      this.emit('error', err)
+      callback(err)
+    })
+  }
+
+  close () {
+    if (!this.connected) { return }
+
+    this.connected = false // will prevent new conns, but will keep current ones as interface requires it
   }
 
   async _readDiscovery () {
@@ -71,7 +93,7 @@ class Connection extends EventEmitter {
     this._readDiscovery() // this will wait for 30s. usually after 10s response should come in, but always check because join events trigger this as well
   }
 
-  async listen (address) {
+  async _listen (address) {
     if (this.connected) { return }
     this.address = address
 
@@ -107,10 +129,10 @@ class Connection extends EventEmitter {
     this.rpc = rpc
 
     muxed.on('stream', this.handler)
-    this.readDiscovery()
+    this._readDiscovery()
   }
 
-  async dial (addr) {
+  async _dial (addr) {
     if (!this.connected) { throw new Error('Server not online!') }
 
     const id = addr.getPeerId()
@@ -138,4 +160,4 @@ class Connection extends EventEmitter {
   }
 }
 
-module.exports = Connection
+module.exports = Listener

@@ -22,12 +22,12 @@ describe('dial', () => {
   it('connect all clients', async () => {
     clients = ids.map(id => new Client({id}))
     conns = clients.map(client => client.createListener(conn => pull(conn, conn)))
-    await Promise.all(conns.map(conn => conn.connect(SERVER_URL)))
+    await Promise.all(conns.map(conn => conn._listen(SERVER_URL)))
     clients.forEach(c => (c.addr = multiaddr('/ipfs/' + c.id.toB58String())))
   })
 
   it('client1 should dial client2 over server1 and echo back', async () => {
-    const conn = await conns[0].dial(clients[1].addr)
+    const conn = await conns[0]._dial(clients[1].addr)
     const res = await prom(cb =>
       pull(
         pull.values(['hello']),

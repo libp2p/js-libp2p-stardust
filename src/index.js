@@ -1,7 +1,7 @@
 'use strict'
 
 const MicroSwitch = require('./micro-switch')
-const StardustConnection = require('./connection')
+const Listener = require('./listener')
 const mafmt = require('mafmt')
 const withIs = require('class-is')
 const includes = require('lodash.includes')
@@ -54,7 +54,7 @@ class Stardust {
     const server = this.connections[getServerForAddress(ma)]
     const conn = new Connection()
 
-    server.dial(ma).then(_conn => {
+    server._dial(ma).then(_conn => {
       conn.resolve(_conn)
       callback()
     }, callback)
@@ -74,7 +74,7 @@ class Stardust {
 
     handler = handler || noop
 
-    return new StardustConnection(this, handler)
+    return new Listener(this, handler)
   }
 
   filter (multiaddrs) {
