@@ -40,8 +40,14 @@ class Listener extends EventEmitter {
       this.emit('listening')
       callback()
     }, err => {
-      this.emit('error', err)
-      callback(err)
+      if (this.client.softFail) {
+        this.emit('listening')
+        callback()
+        // dials will fail, but that's just about it
+      } else {
+        this.emit('error', err)
+        callback(err)
+      }
     })
   }
 

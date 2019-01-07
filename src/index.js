@@ -25,11 +25,13 @@ function getServerForAddress (addr) {
   * @param {PeerId} options.id - Id for the crypto challenge
   * @param {Transport[]} options.transports - Transport(s) for microswitch
   * @param {Muxer[]} options.muxers - Muxer(s) for microswitch
+  * @param {boolean} options.softFail - Whether to softly fail on listen errors
   */
 class Stardust {
-  constructor ({ transports, muxers, id }) {
+  constructor ({ transports, muxers, id, softFail }) {
     this.switch = new MicroSwitch({ transports, addresses: [], muxers })
     this.id = id
+    this.softFail = softFail
 
     this.discovery = new EE()
     this.discovery.tag = 'stardust'
