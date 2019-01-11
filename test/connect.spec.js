@@ -4,7 +4,7 @@ const Client = require('..')
 const ID = require('peer-id')
 const IDJSON = require('./id.json')
 const multiaddr = require('multiaddr')
-const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-websocket-star')
+const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust')
 
 describe('connect', () => {
   let client

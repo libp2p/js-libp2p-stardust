@@ -15,7 +15,7 @@ const EE = require('events').EventEmitter
 function noop () {}
 
 function getServerForAddress (addr) {
-  return String(addr.decapsulate('p2p-websocket-star'))
+  return String(addr.decapsulate('p2p-stardust'))
 }
 
 /**
@@ -89,7 +89,7 @@ class Stardust {
         return false
       }
 
-      return mafmt.WebSocketStar.matches(ma)
+      return mafmt.Stardust.matches(ma)
     })
   }
 }

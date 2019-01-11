@@ -58,7 +58,7 @@ class Listener extends EventEmitter {
   }
 
   async _readDiscovery () {
-    const addrBase = this.address.decapsulate('p2p-websocket-star')
+    const addrBase = this.address.decapsulate('p2p-stardust')
 
     let resp
 
@@ -89,7 +89,7 @@ class Listener extends EventEmitter {
       .map(id => {
         const pi = new PeerInfo(new ID(id))
         if (pi.id.toB58String() === this.client.id.toB58String()) return
-        pi.multiaddrs.add(addrBase.encapsulate('/p2p-websocket-star/ipfs/' + pi.id.toB58String()))
+        pi.multiaddrs.add(addrBase.encapsulate('/p2p-stardust/ipfs/' + pi.id.toB58String()))
 
         return pi
       })
@@ -105,7 +105,7 @@ class Listener extends EventEmitter {
 
     log('connecting to %s', address)
 
-    let conn = await this.client.switch.dial(address.decapsulate('p2p-websocket-star'))
+    let conn = await this.client.switch.dial(address.decapsulate('p2p-stardust'))
     const muxed = await this.client.switch.wrapInMuxer(conn, false)
 
     conn = await prom(cb => muxed.once('stream', s => cb(null, s)))
