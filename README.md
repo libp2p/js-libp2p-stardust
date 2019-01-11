@@ -1,12 +1,19 @@
-# libp2p-stardust
+# js-libp2p-stardust
 
-A better ws-star implementation
+[![](https://img.shields.io/badge/made%20by-mkg20001-blue.svg?style=flat-square)](https://mkg20001.io)
+[![](https://img.shields.io/badge/freenode-%23ipfs-blue.svg?style=flat-square)](http://webchat.freenode.net/?channels=%23ipfs)
+<!-- TODO: review if enabling old CIs really make sense [![Travis](https://travis-ci.org/libp2p/js-libp2p-stardust.svg?style=flat-square)](https://travis-ci.org/libp2p/js-libp2p-stardust)
+[![Circle](https://circleci.com/gh/libp2p/js-libp2p-stardust.svg?style=svg)](https://circleci.com/gh/libp2p/js-libp2p-stardust) -->
+[![Coverage](https://coveralls.io/repos/github/libp2p/js-libp2p-stardust/badge.svg?branch=master)](https://coveralls.io/github/libp2p/js-libp2p-stardust?branch=master)
+[![david-dm](https://david-dm.org/libp2p/js-libp2p-stardust.svg?style=flat-square)](https://david-dm.org/libp2p/js-libp2p-stardust)
 
-# Todo
+[![](https://raw.githubusercontent.com/libp2p/interface-transport/master/img/badge.png)](https://github.com/libp2p/interface-transport)
+[![](https://raw.githubusercontent.com/libp2p/interface-connection/master/img/badge.png)](https://github.com/libp2p/interface-connection)
+[![](https://github.com/libp2p/interface-peer-discovery/raw/master/img/badge.png)](https://github.com/libp2p/interface-peer-discovery)
 
- - [ ] Integrate as libp2p transport (WIP)
- - [x] Add discovery
- - [ ] Split server into it's own repo
+> A better ws-star implementation
+
+> ### WIP
 
 ## Why?
 
@@ -77,3 +84,143 @@ After that the normal libp2p dialing flow is happening between A and B
 ## Not using PoW for registrations like rendezvous
 
 That's why it takes forever to be developed ;)
+
+## Lead Maintainer
+
+[Maciej Krüger](https://github.com/mkg20001)
+
+## Description
+
+`libp2p-stardust` is one of the multiple transports available for libp2p. `libp2p-stardust` incorporates both a transport and a discovery service that is facilitated by the stardust server, also available in this repo and module.
+
+## Todo
+
+ - [ ] Integrate as libp2p transport (WIP)
+ - [x] Add discovery
+ - [ ] Split server into it's own repo
+
+## Usage
+
+### Example
+
+```js
+'use strict'
+
+const Libp2p = require('libp2p')
+const Id = require('peer-id')
+const Info = require('peer-info')
+const multiaddr = require('multiaddr')
+const pull = require('pull-stream')
+
+const Stardust = require('libp2p-stardust')
+
+Id.create((err, id) => { // generate a random id for testing
+  if (err) { throw err } // re-throw any error that might have occured
+
+  const peerInfo = new Info(id)
+  peerInfo.multiaddrs.add(multiaddr('/dns4/<TODO>/tcp/443/wss/p2p-stardust/'))
+
+  const stardust = new Stardust({ id }) // the id is required to prove the client's identity to the server
+
+  const modules = {
+    transport: [
+      stardust
+    ],
+    discovery: [
+      stardust.discovery
+    ]
+  }
+
+  const node = new Libp2p(modules, peerInfo) // create a libp2p node with the stardust transport
+
+  node.handle('/test/1.0.0', (protocol, conn) => {
+    pull(
+      pull.values(['hello']),
+      conn,
+      pull.map((s) => s.toString()),
+      pull.log()
+    )
+  })
+
+  node.start((err) => {
+    if (err) {
+      throw err
+    }
+
+    node.dial(peerInfo, '/test/1.0.0', (err, conn) => {
+      if (err) {
+        throw err
+      }
+
+      pull(
+        pull.values(['hello from the other side']),
+        conn,
+        pull.map((s) => s.toString()),
+        pull.log()
+      )
+    })
+  })
+})
+```
+
+Outputs:
+```
+hello
+hello from the other side
+```
+
+### Install
+
+```bash
+> npm install libp2p-stardust
+```
+
+### API
+
+### Transport
+
+[![](https://raw.githubusercontent.com/libp2p/interface-transport/master/img/badge.png)](https://github.com/libp2p/interface-transport)
+
+### Connection
+
+[![](https://raw.githubusercontent.com/libp2p/interface-connection/master/img/badge.png)](https://github.com/libp2p/interface-connection)
+
+### Peer Discovery - `ws.discovery`
+
+[![](https://github.com/libp2p/interface-peer-discovery/raw/master/img/badge.png)](https://github.com/libp2p/interface-peer-discovery)
+
+<!-- ## [Rendezvous server](https://github.com/libp2p/js-libp2p-stardust-rendezvous#usage) -->
+
+## Stardust Server
+
+Setting up your own stardust server is really easy
+
+First install stardust globally.
+
+```bash
+> npm install --global libp2p-stardust
+```
+
+Now you can use the cli command `stardust-server` to spawn a stardust server.
+
+It only accepts one argument: The address to listen on.
+
+There isn't much to configure via the CLI currently.
+
+By default it listens on `/ip6/::/tcp/5892/ws`
+
+For further customization (e.g. swapping the muxer, using other transports) it is recommended to create a server via the API.
+
+<!--  TODO: To be added
+
+## Hosted Stardust server
+
+We host a stardust server at `/dns4/stardust.discovery.libp2p.io` that can be used for practical demos and experimentation, it **should not be used for apps in production**.
+
+A libp2p-stardust address, using the signalling server we provide, looks like:
+
+`/dns4/stardust.discovery.libp2p.io/tcp/443/wss/p2p-stardust/ipfs/<your-peer-id>`
+
+Note: The address above indicates WebSockets Secure, which can be accessed from both http and https. -->
+
+LICENSE MPL-2.0
