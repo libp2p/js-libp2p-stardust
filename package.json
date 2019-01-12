@@ -19,6 +19,10 @@
     "coverage": "aegir coverage",
     "coverage-publish": "aegir coverage --provider coveralls"
   },
+  "files": [
+    "src",
+    "dist"
+  ],
   "keywords": [
     "ws-star",
     "rendezvous",
