@@ -1,6 +1,6 @@
 {
   "name": "libp2p-stardust",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Basically ws-star but without the bugs",
   "main": "src/index.js",
   "bin": {
@@ -49,5 +49,8 @@
   "bugs": {
     "url": "https://github.com/libp2p/js-libp2p-stardust/issues"
   },
-  "homepage": "https://github.com/libp2p/js-libp2p-stardust#readme"
+  "homepage": "https://github.com/libp2p/js-libp2p-stardust#readme",
+  "contributors": [
+    "Maciej Krüger <mkg20001@gmail.com>"
+  ]
 }
