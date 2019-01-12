@@ -191,8 +191,6 @@ hello from the other side
 
 [![](https://github.com/libp2p/interface-peer-discovery/raw/master/img/badge.png)](https://github.com/libp2p/interface-peer-discovery)
 
-<!-- ## [Rendezvous server](https://github.com/libp2p/js-libp2p-stardust-rendezvous#usage) -->
-
 ## Stardust Server
 
 Setting up your own stardust server is really easy
@@ -213,16 +211,14 @@ By default it listens on `/ip6/::/tcp/5892/ws`
 
 For further customization (e.g. swapping the muxer, using other transports) it is recommended to create a server via the API.
 
-<!--  TODO: To be added
-
 ## Hosted Stardust server
 
-We host a stardust server at `/dns4/stardust.discovery.libp2p.io` that can be used for practical demos and experimentation, it **should not be used for apps in production**.
+We host a stardust server at `/dns4/stardust.mkg20001.io` that can be used for practical demos and experimentation, it **should not be used for apps in production**.
 
-A libp2p-stardust address, using the signalling server we provide, looks like:
+A libp2p-stardust address, using the server we provide, looks like:
 
-`/dns4/stardust.discovery.libp2p.io/tcp/443/wss/p2p-stardust/ipfs/<your-peer-id>`
+`/dns4/stardust.mkg20001.io/tcp/443/wss/p2p-stardust/ipfs/<your-peer-id>`
 
-Note: The address above indicates WebSockets Secure, which can be accessed from both http and https. -->
+Note: The address above indicates WebSockets Secure, which can be accessed from both http and https.
 
 LICENSE MPL-2.0
