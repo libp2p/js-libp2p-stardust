@@ -4,7 +4,7 @@ const MicroSwitch = require('../micro-switch')
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, Error} = require('../rpc/proto')
+const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, Error} = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -16,52 +16,51 @@ const ID = require('peer-id')
 const debug = require('debug')
 const log = debug('libp2p:stardust:server')
 
-class Client {
-  constructor ({muxed, rpc, id, server}) {
-    this.muxed = muxed
-    this.rpc = rpc
-    this.id = id
-    this.server = server
+const handleDial = async (conn, id, server) => {
+  const stream = handshake()
+  pull(
+    conn,
+    stream,
+    conn
+  )
 
-    muxed.on('stream', this.handler.bind(this))
+  log('incomming dial')
+
+  const shake = stream.handshake
+  const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
+
+  const {target} = await rpc.readProto(DialRequest)
+  const targetB58 = new ID(target).toB58String()
+
+  log('dial from %s to %s', id.toB58String(), targetB58)
+
+  const targetPeer = server.network[targetB58]
+
+  if (!targetPeer) {
+    return rpc.writeProto(DialResponse, {error: Error.E_TARGET_UNREACHABLE})
   }
 
-  async handler (conn) {
-    const stream = handshake()
-    pull(
-      conn,
-      stream,
-      conn
-    )
+  try {
+    const conn = await newMuxConn(targetPeer.muxed)
+    rpc.writeProto(DialResponse, {})
 
-    log('incomming dial')
-
-    const shake = stream.handshake
-    const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
-
-    const {target} = await rpc.readProto(DialRequest)
-    const targetB58 = new ID(target).toB58String()
-
-    log('dial from %s to %s', this.id.toB58String(), targetB58)
-
-    const targetPeer = this.server.network[targetB58]
-
-    if (!targetPeer) {
-      return rpc.writeProto(DialResponse, {error: Error.E_TARGET_UNREACHABLE})
-    }
-
-    try {
-      const conn = await targetPeer.openConn()
-      rpc.writeProto(DialResponse, {})
-
-      pull(conn, shake.rest(), conn)
-    } catch (e) {
-      return rpc.writeProto(DialResponse, {error: Error.E_GENERIC})
-    }
+    pull(conn, shake.rest(), conn)
+  } catch (e) {
+    return rpc.writeProto(DialResponse, {error: Error.E_GENERIC})
   }
+}
 
-  async openConn () {
-    return prom(cb => this.muxed.newStream(cb))
+const newMuxConn = (muxed) => prom(cb => muxed.newStream(cb))
+const sleep = (i) => new Promise((resolve, reject) => setTimeout(resolve, i))
+
+const checkAckLoop = async (rpc, onEnd) => {
+  try {
+    while (true) {
+      await rpc.readProto(DiscoveryAck)
+      await sleep(100)
+    }
+  } catch (err) { // we'll get here after a disconnect
+    onEnd()
   }
 }
 
@@ -77,13 +76,11 @@ class Server {
   async handler (conn) {
     log('new connection')
 
-    const muxed = await this.switch.wrapInMuxer(conn, true)
-    muxed.newStream(async (err, conn) => {
-      if (err) {
-        return log(err)
-      }
+    try {
+      const muxed = await this.switch.wrapInMuxer(conn, true) // add muxer ontop of raw socket
+      conn = await newMuxConn(muxed) // get a muxed connection
 
-      const rpc = LP(conn)
+      const rpc = LP(conn) // turn into length-prefixed rpc interface
 
       try {
         log('performing challenge')
@@ -91,7 +88,12 @@ class Server {
         const {random128: random, peerID} = await rpc.readProto(JoinInit)
         const id = await prom(cb => ID.createFromJSON(peerID, cb))
 
-        log('got rand')
+        if (!Buffer.isBuffer(random) || random.length !== 128) {
+          rpc.writeProto(JoinVerify, {error: Error.E_RAND_LENGTH})
+          return muxed.end()
+        }
+
+        log('got id, challenge for %s', id.toB58String())
 
         const saltSecret = crypto.randomBytes(128)
         const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
@@ -99,32 +101,54 @@ class Server {
         rpc.writeProto(JoinChallenge, {saltEncrypted})
 
         const solution = sha5(random, saltSecret)
-
         const {solution: solutionClient} = await rpc.readProto(JoinChallengeSolution)
 
         if (solution.toString('hex') !== solutionClient.toString('hex')) {
-          return rpc.writeProto(JoinVerify, {error: Error.E_INCORRECT_SOLUTION}) // TODO: connection close
+          rpc.writeProto(JoinVerify, {error: Error.E_INCORRECT_SOLUTION})
+          return muxed.end()
         }
 
         rpc.writeProto(JoinVerify, {})
 
-        log('adding to network')
-
-        this.addToNetwork(new Client({muxed, rpc, id, server: this}))
-      } catch (e) {
-        log(e)
-        rpc.writeProto(JoinVerify, {error: Error.E_GENERIC}) // if anything fails, respond
+        this.addToNetwork(muxed, rpc, id)
+      } catch (err) {
+        log(err)
+        rpc.writeProto(JoinVerify, {error: Error.E_GENERIC}) // if anything fails, respond with generic error
+        return muxed.end()
       }
-    })
+    } catch (err) {
+      log(err)
+    }
   }
 
-  addToNetwork (client) {
-    this.network[client.id.toB58String()] = client
+  addToNetwork (muxed, rpc, id) {
+    log('adding %s to network', id.toB58String())
+
+    muxed.on('stream', (conn) => handleDial(conn, id, this))
+
+    checkAckLoop(rpc, () => this.removeFromNetwork(client))
+
+    const client = this.network[id.toB58String()] = {
+      id,
+      muxed,
+      rpc
+    }
+
+    this.update()
+    this.broadcastDiscovery()
+  }
+
+  removeFromNetwork (client) {
+    log('removing %s from network', client.id.toB58String())
+
+    delete this.network[client.id.toB58String()]
+
     this.update()
     this.broadcastDiscovery()
   }
 
   update () {
+    log('updating cached data')
     this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
     this._cachedDiscovery = this.networkArray.length ? Discovery.encode({ids: this.networkArray.map(client => client.id._id)}) : this._emptyCachedDiscovery
   }

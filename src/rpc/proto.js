@@ -38,6 +38,10 @@ message Discovery {
   repeated bytes ids = 1;
 }
 
+message DiscoveryAck {
+  bytes ack = 1;
+}
+
 message DialRequest {
   bytes target = 1;
 }

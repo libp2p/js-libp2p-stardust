@@ -49,6 +49,8 @@ The server periodically sends the list of peerIDs that are currently online back
 By default every 10s or whenever a client joins
 This is also used as a ping by the client
 <-[ Discovery{ ids: [<bytes>, ...] } ]--------------------------------------------------
+The client sends back an ACK to indicate to the server that it's still connected
+--[ DiscoveryAck{  } ]----------------------------------------------------------------->
 ```
 
 ## Dialing flow

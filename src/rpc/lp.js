@@ -36,16 +36,13 @@ module.exports.wrap = (read, write) => {
 }
 
 module.exports.writeWrap = (shakeWrite) => {
-  return {
-    push: data => {
-      pull(
-        pull.values([data]),
-        lp.encode(),
-        pull.collect((err, res) => {
-          if (err) return
-          res.forEach(shakeWrite)
-        })
-      )
-    }
-  }
+  const write = pushable()
+
+  pull(
+    write,
+    lp.encode(),
+    pull.drain(data => shakeWrite(data))
+  )
+
+  return write
 }

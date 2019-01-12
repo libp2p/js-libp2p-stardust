@@ -19,10 +19,12 @@ const log = debug('libp2p:stardust:client')
 const EventEmitter = require('events').EventEmitter
 
 function translateAndThrow (eCode) {
-  throw new Error(ErrorTranslations[eCode])
+  throw new Error(ErrorTranslations[eCode] || ('Unknown error #' + eCode + '! Please upgrade libp2p-stardust to the latest version!'))
 }
 
 function noop () { }
+
+const ACK = Buffer.from('01', 'hex')
 
 class Listener extends EventEmitter {
   constructor (client, handler) {
@@ -53,7 +55,6 @@ class Listener extends EventEmitter {
 
   close () {
     if (!this.connected) { return }
-
     this.connected = false // will prevent new conns, but will keep current ones as interface requires it
   }
 
@@ -64,6 +65,7 @@ class Listener extends EventEmitter {
 
     try {
       resp = await this.rpc.readProto(Discovery)
+      await this.rpc.write(ACK)
     } catch (e) {
       log('failed to read discovery: %s', e.stack)
       log('assume disconnected!')
