@@ -9,6 +9,8 @@ const MPLEX = require('libp2p-mplex')
 const debug = require('debug')
 const log = debug('libp2p:stardust:microswitch')
 
+function noop () { }
+
 function firstSuccess (errMsg, proms) {
   return new Promise((resolve, reject) => {
     let triggered = false
@@ -39,7 +41,7 @@ class MicroSwitch {
     this.transports = transports || [new WS()]
     this.muxers = muxers || [MPLEX]
     this.addresses = addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
-    this.handler = handler || console.log
+    this.handler = handler || noop
 
     log('creating microswitch with %o transport(s), %o muxer(s) and %o address(es)', this.transports.length, this.muxers.length, this.addresses.length)
 

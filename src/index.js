@@ -8,8 +8,8 @@ const includes = require('lodash/includes')
 const isFunction = require('lodash/isFunction')
 const Connection = require('interface-connection').Connection
 const once = require('once')
-const debug = require('debug')
-const log = debug('libp2p:stardust')
+/* const debug = require('debug')
+const log = debug('libp2p:stardust') */
 const EE = require('events').EventEmitter
 
 function noop () {}

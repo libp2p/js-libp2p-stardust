@@ -1,5 +1,7 @@
 'use strict'
 
+/* eslint-env mocha */
+
 const Client = require('..')
 const ID = require('peer-id')
 const IDJSON = require('./id.json')
