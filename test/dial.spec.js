@@ -42,7 +42,7 @@ describe('dial', () => {
 
   it('client1 should discover client2', function (done) { // TODO: fix this
     this.timeout(15000)
-    clients[0].discovery.start()
+    clients[0].discovery.start(() => {})
     clients[0].discovery.once('peer', (pi) => {
       require('assert')(String(pi.multiaddrs.toArray()[0]) === String(SERVER_URL) + String(clients[1].addr))
       done()
