@@ -53,12 +53,16 @@ class MicroSwitch {
         conn.info.info.msCallback(muxed)
       })
     })
+
+    this.protos = new multistream.Listener()
   }
 
-  /*
-   * Wraps a connection in a muxer
-   * @returns MuxedConn
-   */
+  /**
+    * Wraps a connection in a muxer
+    * @param {Connection} conn - Connection to wrap
+    * @param {boolean} isServer - Set whether this is the server or client side
+    * @returns {MuxedConn}
+    */
   wrapInMuxer (conn, isServer) {
     log('muxer wrap (isServer=%o)', isServer)
     return new Promise((resolve, reject) => {
@@ -77,6 +81,33 @@ class MicroSwitch {
             if (err) { return reject(err) }
             const muxed = firstMuxer.dialer(conn)
             return resolve(muxed)
+          })
+        })
+      }
+    })
+  }
+
+  /**
+    * Negotiate the protocol to use
+    * @param {Connection} conn - Connection to wrap
+    * @param {string} requestedProtocol - The requested protocol. If null, server-side is assumed
+    * @return {Connection?} Wrapped connection, can be null if server-side
+    */
+  negotiateProtocol (conn, requestedProtocol) {
+    log('negotiate protocol (isServer=%o, proto=%o)', !requestedProtocol, requestedProtocol)
+    return new Promise((resolve, reject) => {
+      if (!requestedProtocol) {
+        this.protos.handle(conn, (err) => {
+          if (err) { return reject(err) }
+        })
+      } else {
+        const msDialer = new multistream.Dialer()
+        msDialer.handle(conn, (err) => {
+          if (err) { return reject(err) }
+
+          msDialer.select(requestedProtocol, (err, conn) => {
+            if (err) { return reject(err) }
+            return resolve(conn)
           })
         })
       }

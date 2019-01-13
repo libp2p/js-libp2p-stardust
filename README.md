@@ -30,6 +30,7 @@ Client                                                                          
 
 The client connects
 Both the server and the client negotiate a muxer to use using multistream-select
+After that the server and the client negotiate the protocol version to use, currently only /p2p/stardust/0.1.0 which is described below
 
 The client sends a random 128-byte long string and it's peerID to the server
 --[ JoinInit{random128: rand(128), peerID: $self.peerID.toJSON()} ]-------------------->

@@ -35,10 +35,13 @@ class Stardust {
 
     this.discovery = new EE()
     this.discovery.tag = 'stardust'
+    this.discovery.enabled = false
     this.discovery.start = (callback) => {
+      this.discovery.enabled = true
       setImmediate(callback)
     }
     this.discovery.stop = (callback) => {
+      this.discovery.enabled = false
       setImmediate(callback)
     }
 

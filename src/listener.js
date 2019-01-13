@@ -64,7 +64,7 @@ class Listener extends EventEmitter {
     let resp
 
     try {
-      resp = await this.rpc.readProto(Discovery)
+      resp = await this.rpc.readProto(Discovery) // this will wait for 30s. usually after 10s response should come in, but always check because join events trigger this as well
       await this.rpc.write(ACK)
     } catch (e) {
       log('failed to read discovery: %s', e.stack)
@@ -86,19 +86,24 @@ class Listener extends EventEmitter {
       return
     }
 
-    log('reading discovery')
-    resp.ids
-      .map(id => {
-        const pi = new PeerInfo(new ID(id))
-        if (pi.id.toB58String() === this.client.id.toB58String()) return
-        pi.multiaddrs.add(addrBase.encapsulate('/p2p-stardust/ipfs/' + pi.id.toB58String()))
+    if (this.client.discovery.enabled) {
+      log('reading discovery')
 
-        return pi
-      })
-      .filter(Boolean)
-      .forEach(pi => this.client.discovery.emit('peer', pi))
+      resp.ids
+        .map(id => {
+          const pi = new PeerInfo(new ID(id))
+          if (pi.id.toB58String() === this.client.id.toB58String()) return
+          pi.multiaddrs.add(addrBase.encapsulate('/p2p-stardust/ipfs/' + pi.id.toB58String()))
 
-    this._readDiscovery() // this will wait for 30s. usually after 10s response should come in, but always check because join events trigger this as well
+          return pi
+        })
+        .filter(Boolean)
+        .forEach(pi => this.client.discovery.emit('peer', pi))
+    } else {
+      log('reading discovery, but tossing data since it\'s not enabled')
+    }
+
+    setTimeout(() => this._readDiscovery(), 100) // cooldown
   }
 
   async _listen (address) {
@@ -111,6 +116,7 @@ class Listener extends EventEmitter {
     const muxed = await this.client.switch.wrapInMuxer(conn, false)
 
     conn = await prom(cb => muxed.once('stream', s => cb(null, s)))
+    conn = await this.client.switch.negotiateProtocol(conn, '/p2p/stardust/0.1.0')
     const rpc = LP(conn)
 
     log('performing challenge')

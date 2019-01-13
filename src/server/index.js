@@ -71,6 +71,16 @@ class Server {
     this.network = {}
     this.networkArray = []
     this._emptyCachedDiscovery = this._cachedDiscovery = Buffer.from('01', 'hex')
+
+    this.switch.protos.addHandler('/p2p/stardust/0.1.0', async (protocol, conn) => {
+      log('adding handler for stardust v0.1.0')
+
+      try {
+        this.handlerV010(conn, conn.info.info.muxed)
+      } catch (err) {
+        log(err)
+      }
+    })
   }
 
   async handler (conn) {
@@ -80,44 +90,49 @@ class Server {
       const muxed = await this.switch.wrapInMuxer(conn, true) // add muxer ontop of raw socket
       conn = await newMuxConn(muxed) // get a muxed connection
 
-      const rpc = LP(conn) // turn into length-prefixed rpc interface
-
-      try {
-        log('performing challenge')
-
-        const {random128: random, peerID} = await rpc.readProto(JoinInit)
-        const id = await prom(cb => ID.createFromJSON(peerID, cb))
-
-        if (!Buffer.isBuffer(random) || random.length !== 128) {
-          rpc.writeProto(JoinVerify, {error: Error.E_RAND_LENGTH})
-          return muxed.end()
-        }
-
-        log('got id, challenge for %s', id.toB58String())
-
-        const saltSecret = crypto.randomBytes(128)
-        const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
-
-        rpc.writeProto(JoinChallenge, {saltEncrypted})
-
-        const solution = sha5(random, saltSecret)
-        const {solution: solutionClient} = await rpc.readProto(JoinChallengeSolution)
-
-        if (solution.toString('hex') !== solutionClient.toString('hex')) {
-          rpc.writeProto(JoinVerify, {error: Error.E_INCORRECT_SOLUTION})
-          return muxed.end()
-        }
-
-        rpc.writeProto(JoinVerify, {})
-
-        this.addToNetwork(muxed, rpc, id)
-      } catch (err) {
-        log(err)
-        rpc.writeProto(JoinVerify, {error: Error.E_GENERIC}) // if anything fails, respond with generic error
-        return muxed.end()
-      }
+      conn.muxed = muxed
+      await this.switch.negotiateProtocol(conn)
     } catch (err) {
       log(err)
+    }
+  }
+
+  async handlerV010 (conn, muxed) {
+    const rpc = LP(conn) // turn into length-prefixed rpc interface
+
+    try {
+      log('performing challenge')
+
+      const {random128: random, peerID} = await rpc.readProto(JoinInit)
+      const id = await prom(cb => ID.createFromJSON(peerID, cb))
+
+      if (!Buffer.isBuffer(random) || random.length !== 128) {
+        rpc.writeProto(JoinVerify, {error: Error.E_RAND_LENGTH})
+        return muxed.end()
+      }
+
+      log('got id, challenge for %s', id.toB58String())
+
+      const saltSecret = crypto.randomBytes(128)
+      const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
+
+      rpc.writeProto(JoinChallenge, {saltEncrypted})
+
+      const solution = sha5(random, saltSecret)
+      const {solution: solutionClient} = await rpc.readProto(JoinChallengeSolution)
+
+      if (solution.toString('hex') !== solutionClient.toString('hex')) {
+        rpc.writeProto(JoinVerify, {error: Error.E_INCORRECT_SOLUTION})
+        return muxed.end()
+      }
+
+      rpc.writeProto(JoinVerify, {})
+
+      this.addToNetwork(muxed, rpc, id)
+    } catch (err) {
+      log(err)
+      rpc.writeProto(JoinVerify, {error: Error.E_GENERIC}) // if anything fails, respond with generic error
+      return muxed.end()
     }
   }
 
