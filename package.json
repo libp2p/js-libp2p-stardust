@@ -1,6 +1,6 @@
 {
   "name": "libp2p-stardust",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Basically ws-star but without the bugs",
   "main": "src/index.js",
   "bin": {
