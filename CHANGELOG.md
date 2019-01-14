@@ -1,3 +1,19 @@
+<a name="0.0.3"></a>
+## [0.0.3](https://github.com/libp2p/js-libp2p-stardust/compare/v0.0.2...v0.0.3) (2019-01-14)
+
+
+### Bug Fixes
+
+* **test:** call .start() with cb ([5edf8fc](https://github.com/libp2p/js-libp2p-stardust/commit/5edf8fc))
+
+
+### Features
+
+* fire discovery only after .start(), negotiate proto version ([fe7dfe0](https://github.com/libp2p/js-libp2p-stardust/commit/fe7dfe0))
+* stardust server on readme ([5f69f6a](https://github.com/libp2p/js-libp2p-stardust/commit/5f69f6a))
+
+
+
 <a name="0.0.2"></a>
 ## 0.0.2 (2019-01-12)
 
