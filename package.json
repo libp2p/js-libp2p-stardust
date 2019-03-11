@@ -31,17 +31,17 @@
   "author": "Maciej Krüger <mkg20001@gmail.com>",
   "license": "MPL-2.0",
   "dependencies": {
-    "libp2p-mplex": "github:libp2p/js-libp2p-mplex#feat/pull-stream",
-    "libp2p-websockets": "~0.12.1",
-    "mafmt": "github:mkg20001/js-mafmt#add-stardust",
-    "multiaddr": "github:mkg20001/js-multiaddr#patch-1",
+    "libp2p-mplex": "~0.8.4",
+    "libp2p-websockets": "~0.12.2",
+    "mafmt": "^6.0.7",
+    "multiaddr": "^6.0.6",
     "multistream-select": "~0.14.4",
     "peer-id": "github:libp2p/js-peer-id#tmp-use-peer-id-with-encrypt",
     "peer-info": "~0.15.1",
     "protons": "^1.0.1"
   },
   "devDependencies": {
-    "aegir": "^18.0.3"
+    "aegir": "^18.2.1"
   },
   "directories": {
     "test": "test"
