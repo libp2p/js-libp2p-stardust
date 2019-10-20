@@ -3,7 +3,7 @@
 const LP = require('./rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, ErrorTranslations} = require('./rpc/proto')
+const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, ErrorTranslations } = require('./rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -122,18 +122,18 @@ class Listener extends EventEmitter {
     log('performing challenge')
 
     const random = crypto.randomBytes(128)
-    rpc.writeProto(JoinInit, {random128: random, peerID: this.client.id.toJSON()})
+    rpc.writeProto(JoinInit, { random128: random, peerID: this.client.id.toJSON() })
 
     log('sent rand')
 
-    const {error, saltEncrypted} = await rpc.readProto(JoinChallenge)
+    const { error, saltEncrypted } = await rpc.readProto(JoinChallenge)
     if (error) { translateAndThrow(error) }
     const saltSecret = await prom(cb => this.client.id.privKey.decrypt(saltEncrypted, cb))
 
     const solution = sha5(random, saltSecret)
-    rpc.writeProto(JoinChallengeSolution, {solution})
+    rpc.writeProto(JoinChallengeSolution, { solution })
 
-    const {error: error2} = await rpc.readProto(JoinVerify)
+    const { error: error2 } = await rpc.readProto(JoinVerify)
     if (error2) { translateAndThrow(error2) }
 
     log('connected')
@@ -166,8 +166,8 @@ class Listener extends EventEmitter {
     const shake = stream.handshake
     const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
 
-    rpc.writeProto(DialRequest, {target: _id})
-    const {error} = await rpc.readProto(DialResponse)
+    rpc.writeProto(DialRequest, { target: _id })
+    const { error } = await rpc.readProto(DialResponse)
     if (error) { translateAndThrow(error) }
 
     return shake.rest()

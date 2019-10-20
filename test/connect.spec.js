@@ -13,17 +13,12 @@ describe('connect', () => {
   let conn
   let id
 
-  before((done) => {
-    ID.createFromJSON(IDJSON, (err, _id) => {
-      if (err) { return done(err) }
-      id = _id
-
-      done()
-    })
+  before(async () => {
+    id = await ID.createFromJSON(IDJSON)
   })
 
   it('should be creatable', () => {
-    client = new Client({id})
+    client = new Client({ id })
     conn = client.createListener(() => {})
   })
 
