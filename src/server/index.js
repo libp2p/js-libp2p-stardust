@@ -4,7 +4,7 @@ const MicroSwitch = require('../micro-switch')
 const LP = require('../rpc/lp')
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
-const {JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, Error} = require('../rpc/proto')
+const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, Error } = require('../rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
@@ -29,7 +29,7 @@ const handleDial = async (conn, id, server) => {
   const shake = stream.handshake
   const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
 
-  const {target} = await rpc.readProto(DialRequest)
+  const { target } = await rpc.readProto(DialRequest)
   const targetB58 = new ID(target).toB58String()
 
   log('dial from %s to %s', id.toB58String(), targetB58)
@@ -37,7 +37,7 @@ const handleDial = async (conn, id, server) => {
   const targetPeer = server.network[targetB58]
 
   if (!targetPeer) {
-    return rpc.writeProto(DialResponse, {error: Error.E_TARGET_UNREACHABLE})
+    return rpc.writeProto(DialResponse, { error: Error.E_TARGET_UNREACHABLE })
   }
 
   try {
@@ -46,7 +46,7 @@ const handleDial = async (conn, id, server) => {
 
     pull(conn, shake.rest(), conn)
   } catch (e) {
-    return rpc.writeProto(DialResponse, {error: Error.E_GENERIC})
+    return rpc.writeProto(DialResponse, { error: Error.E_GENERIC })
   }
 }
 
@@ -103,26 +103,26 @@ class Server {
     try {
       log('performing challenge')
 
-      const {random128: random, peerID} = await rpc.readProto(JoinInit)
-      const id = await prom(cb => ID.createFromJSON(peerID, cb))
+      const { random128: random, peerID } = await rpc.readProto(JoinInit)
+      const id = await ID.createFromJSON(peerID)
 
       if (!Buffer.isBuffer(random) || random.length !== 128) {
-        rpc.writeProto(JoinVerify, {error: Error.E_RAND_LENGTH})
+        rpc.writeProto(JoinVerify, { error: Error.E_RAND_LENGTH })
         return muxed.end()
       }
 
       log('got id, challenge for %s', id.toB58String())
 
       const saltSecret = crypto.randomBytes(128)
-      const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
+      const saltEncrypted = await id.pubKey.encrypt(saltSecret)
 
-      rpc.writeProto(JoinChallenge, {saltEncrypted})
+      rpc.writeProto(JoinChallenge, { saltEncrypted })
 
       const solution = sha5(random, saltSecret)
-      const {solution: solutionClient} = await rpc.readProto(JoinChallengeSolution)
+      const { solution: solutionClient } = await rpc.readProto(JoinChallengeSolution)
 
       if (solution.toString('hex') !== solutionClient.toString('hex')) {
-        rpc.writeProto(JoinVerify, {error: Error.E_INCORRECT_SOLUTION})
+        rpc.writeProto(JoinVerify, { error: Error.E_INCORRECT_SOLUTION })
         return muxed.end()
       }
 
@@ -131,7 +131,7 @@ class Server {
       this.addToNetwork(muxed, rpc, id)
     } catch (err) {
       log(err)
-      rpc.writeProto(JoinVerify, {error: Error.E_GENERIC}) // if anything fails, respond with generic error
+      rpc.writeProto(JoinVerify, { error: Error.E_GENERIC }) // if anything fails, respond with generic error
       return muxed.end()
     }
   }
@@ -165,7 +165,7 @@ class Server {
   update () {
     log('updating cached data')
     this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
-    this._cachedDiscovery = this.networkArray.length ? Discovery.encode({ids: this.networkArray.map(client => client.id._id)}) : this._emptyCachedDiscovery
+    this._cachedDiscovery = this.networkArray.length ? Discovery.encode({ ids: this.networkArray.map(client => client.id._id) }) : this._emptyCachedDiscovery
   }
 
   broadcastDiscovery () {
