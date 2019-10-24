@@ -53,6 +53,10 @@ class Listener extends EventEmitter {
     })
   }
 
+  getAddrs (cb) {
+    cb(null, this.address ? [this.address] : [])
+  }
+
   close () {
     if (!this.connected) { return }
     this.connected = false // will prevent new conns, but will keep current ones as interface requires it
