@@ -104,7 +104,7 @@ class Server {
       log('performing challenge')
 
       const { random128: random, peerID } = await rpc.readProto(JoinInit)
-      const id = await ID.createFromJSON(peerID)
+      const id = await prom(cb => ID.createFromJSON(peerID, cb))
 
       if (!Buffer.isBuffer(random) || random.length !== 128) {
         rpc.writeProto(JoinVerify, { error: Error.E_RAND_LENGTH })

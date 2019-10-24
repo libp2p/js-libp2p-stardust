@@ -7,6 +7,7 @@ const ID = require('peer-id')
 const IDJSON = require('./id.json')
 const multiaddr = require('multiaddr')
 const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust')
+const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
 describe('connect', () => {
   let client
@@ -14,7 +15,7 @@ describe('connect', () => {
   let id
 
   before(async () => {
-    id = await ID.createFromJSON(IDJSON)
+    id = await prom(cb => ID.createFromJSON(IDJSON, cb))
   })
 
   it('should be creatable', () => {

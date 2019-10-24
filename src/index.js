@@ -32,6 +32,7 @@ class Stardust {
   constructor ({ transports, muxers, id, softFail }) {
     this.switch = new MicroSwitch({ transports, addresses: [], muxers })
     this.softFail = softFail
+    this.id = id
 
     this.discovery = new EE()
     this.discovery.tag = 'stardust'
