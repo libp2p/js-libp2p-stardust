@@ -111,6 +111,8 @@ class Listener extends EventEmitter {
   }
 
   async _listen (address) {
+    await this.client.id
+
     if (this.connected) { return }
     this.address = address
 

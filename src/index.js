@@ -8,6 +8,7 @@ const includes = require('lodash/includes')
 const isFunction = require('lodash/isFunction')
 const Connection = require('interface-connection').Connection
 const once = require('once')
+const Id = require('peer-id')
 /* const debug = require('debug')
 const log = debug('libp2p:stardust') */
 const EE = require('events').EventEmitter
@@ -30,7 +31,6 @@ function getServerForAddress (addr) {
 class Stardust {
   constructor ({ transports, muxers, id, softFail }) {
     this.switch = new MicroSwitch({ transports, addresses: [], muxers })
-    this.id = id
     this.softFail = softFail
 
     this.discovery = new EE()
@@ -46,6 +46,10 @@ class Stardust {
     }
 
     this.connections = {}
+
+    this.id = Id.createFromJSON(id.toJSON()).then(id => { // fix promise/callback inconsitencies
+      this.id = id
+    })
   }
 
   dial (ma, options, callback) {
