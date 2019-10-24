@@ -114,7 +114,7 @@ class Server {
       log('got id, challenge for %s', id.toB58String())
 
       const saltSecret = crypto.randomBytes(128)
-      const saltEncrypted = await id.pubKey.encrypt(saltSecret)
+      const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
 
       rpc.writeProto(JoinChallenge, { saltEncrypted })
 

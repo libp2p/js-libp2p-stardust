@@ -46,10 +46,6 @@ class Stardust {
     }
 
     this.connections = {}
-
-    this.id = Id.createFromJSON(id.toJSON()).then(id => { // fix promise/callback inconsitencies
-      this.id = id
-    })
   }
 
   dial (ma, options, callback) {
