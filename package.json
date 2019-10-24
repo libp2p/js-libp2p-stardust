@@ -36,7 +36,7 @@
     "mafmt": "^7.0.0",
     "multiaddr": "^7.1.0",
     "multistream-select": "~0.14.6",
-    "peer-id": "github:libp2p/js-peer-id#tmp-use-peer-id-with-encrypt",
+    "peer-id": "~0.12.5",
     "peer-info": "~0.16.2",
     "protons": "^1.0.1"
   },
