@@ -104,7 +104,7 @@ class Server {
       log('performing challenge')
 
       const { random128: random, peerID } = await rpc.readProto(JoinInit)
-      const id = await ID.createFromJSON(peerID)
+      const id = await prom(cb => ID.createFromJSON(peerID, cb))
 
       if (!Buffer.isBuffer(random) || random.length !== 128) {
         rpc.writeProto(JoinVerify, { error: Error.E_RAND_LENGTH })
@@ -114,7 +114,7 @@ class Server {
       log('got id, challenge for %s', id.toB58String())
 
       const saltSecret = crypto.randomBytes(128)
-      const saltEncrypted = await id.pubKey.encrypt(saltSecret)
+      const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
 
       rpc.writeProto(JoinChallenge, { saltEncrypted })
 

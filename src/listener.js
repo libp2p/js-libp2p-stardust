@@ -132,7 +132,7 @@ class Listener extends EventEmitter {
 
     const { error, saltEncrypted } = await rpc.readProto(JoinChallenge)
     if (error) { translateAndThrow(error) }
-    const saltSecret = await this.client.id.privKey.decrypt(saltEncrypted)
+    const saltSecret = await prom(cb => this.client.id.privKey.decrypt(saltEncrypted, cb))
 
     const solution = sha5(random, saltSecret)
     rpc.writeProto(JoinChallengeSolution, { solution })

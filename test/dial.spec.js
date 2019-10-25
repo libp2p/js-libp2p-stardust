@@ -16,7 +16,7 @@ describe('dial', () => {
   let ids
 
   before(async () => {
-    ids = await Promise.all(IDJSON.map(id => ID.createFromJSON(id)))
+    ids = await Promise.all( IDJSON.map( id => prom(cb => ID.createFromJSON(id, cb) ) ) )
   })
 
   it('connect all clients', async () => {
