@@ -60,7 +60,7 @@ class Stardust {
     const conn = new Connection()
 
     server._dial(ma).then(_conn => {
-      conn.resolve(_conn)
+      conn.setInnerConn(_conn)
       callback()
     }, callback)
 

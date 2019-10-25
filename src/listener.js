@@ -60,6 +60,7 @@ class Listener extends EventEmitter {
   close () {
     if (!this.connected) { return }
     this.connected = false // will prevent new conns, but will keep current ones as interface requires it
+    delete this.client.connections[this.aid]
   }
 
   async _readDiscovery () {
@@ -113,6 +114,7 @@ class Listener extends EventEmitter {
   async _listen (address) {
     if (this.connected) { return }
     this.address = address
+    this.aid = String(this.address.decapsulate('p2p-stardust'))
 
     log('connecting to %s', address)
 
@@ -145,6 +147,7 @@ class Listener extends EventEmitter {
     this.connected = true
     this.muxed = muxed
     this.rpc = rpc
+    this.client.connections[this.aid] = this
 
     muxed.on('stream', this.handler)
     this._readDiscovery()
