@@ -16,13 +16,11 @@ describe('dial', () => {
   let ids
 
   before(async () => {
-    ids = await Promise.all(IDJSON.map(id => new Promise((resolve, reject) =>
-      ID.createFromJSON(id, (err, id) => err ? reject(err) : resolve(id))
-    )))
+    ids = await Promise.all( IDJSON.map( id => prom(cb => ID.createFromJSON(id, cb) ) ) )
   })
 
   it('connect all clients', async () => {
-    clients = ids.map(id => new Client({id}))
+    clients = ids.map(id => new Client({ id }))
     conns = clients.map(client => client.createListener(conn => pull(conn, conn)))
     await Promise.all(conns.map(conn => conn._listen(SERVER_URL)))
     clients.forEach(c => (c.addr = multiaddr('/ipfs/' + c.id.toB58String())))

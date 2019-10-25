@@ -92,7 +92,11 @@ class Stardust {
         return false
       }
 
-      return mafmt.Stardust.matches(ma)
+      if (includes(ma.protoNames(), 'p2p-stardust')) {
+        return true
+      }
+
+      // return mafmt.Stardust.matches(ma)
     })
   }
 }
