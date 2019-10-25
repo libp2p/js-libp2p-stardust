@@ -1,3 +1,13 @@
+<a name="0.1.1"></a>
+## [0.1.1](https://github.com/libp2p/js-libp2p-stardust/compare/v0.1.0...v0.1.1) (2019-10-25)
+
+
+### Bug Fixes
+
+* dialing errors ([03699aa](https://github.com/libp2p/js-libp2p-stardust/commit/03699aa))
+
+
+
 <a name="0.1.0"></a>
 # [0.1.0](https://github.com/libp2p/js-libp2p-stardust/compare/v0.0.3...v0.1.0) (2019-10-25)
 
