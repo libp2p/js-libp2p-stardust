@@ -1,3 +1,22 @@
+<a name="0.1.0"></a>
+# [0.1.0](https://github.com/libp2p/js-libp2p-stardust/compare/v0.0.3...v0.1.0) (2019-10-25)
+
+
+### Bug Fixes
+
+* interface ([bc559c1](https://github.com/libp2p/js-libp2p-stardust/commit/bc559c1))
+* lint ([ab7bfbe](https://github.com/libp2p/js-libp2p-stardust/commit/ab7bfbe))
+* mafmt bug ([d7cbcc0](https://github.com/libp2p/js-libp2p-stardust/commit/d7cbcc0))
+* mode of bin.js ([b3a13fd](https://github.com/libp2p/js-libp2p-stardust/commit/b3a13fd))
+* promises ([1a9b5ba](https://github.com/libp2p/js-libp2p-stardust/commit/1a9b5ba))
+
+
+### Features
+
+* use release enc/dec and switch to cb based for now ([d2b158a](https://github.com/libp2p/js-libp2p-stardust/commit/d2b158a))
+
+
+
 <a name="0.0.3"></a>
 ## [0.0.3](https://github.com/libp2p/js-libp2p-stardust/compare/v0.0.2...v0.0.3) (2019-01-14)
 
