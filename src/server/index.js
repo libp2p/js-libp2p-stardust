@@ -72,7 +72,7 @@ class Server {
     this.networkArray = []
     this._emptyCachedDiscovery = this._cachedDiscovery = Buffer.from('01', 'hex')
 
-    this.switch.protos.addHandler('/p2p/stardust/0.1.0', async (protocol, conn) => {
+    this.switch.protos.addHandler('/p2p/stardust/0.1.0', (protocol, conn) => {
       log('adding handler for stardust v0.1.0')
 
       try {

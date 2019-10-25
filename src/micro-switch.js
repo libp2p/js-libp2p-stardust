@@ -114,7 +114,7 @@ class MicroSwitch {
     })
   }
 
-  async dial (addr) {
+  dial (addr) {
     log('dialing %s', String(addr))
     return firstSuccess('All transports failed to dial', this.transports
       .filter(transport => Boolean(transport.filter([addr]).length))

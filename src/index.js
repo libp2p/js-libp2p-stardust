@@ -2,7 +2,7 @@
 
 const MicroSwitch = require('./micro-switch')
 const Listener = require('./listener')
-const mafmt = require('mafmt')
+// const mafmt = require('mafmt')
 const withIs = require('class-is')
 const includes = require('lodash/includes')
 const isFunction = require('lodash/isFunction')
