@@ -1,3 +1,13 @@
+<a name="0.1.2"></a>
+## [0.1.2](https://github.com/libp2p/js-libp2p-stardust/compare/v0.1.1...v0.1.2) (2019-10-27)
+
+
+### Bug Fixes
+
+* reconnecting ([9f000b2](https://github.com/libp2p/js-libp2p-stardust/commit/9f000b2))
+
+
+
 <a name="0.1.1"></a>
 ## [0.1.1](https://github.com/libp2p/js-libp2p-stardust/compare/v0.1.0...v0.1.1) (2019-10-25)
 
