@@ -82,7 +82,7 @@ class Listener extends EventEmitter {
       log('reconnecting')
 
       try {
-        await this.connect(this.address)
+        await this._listen(this.address)
         log('reconnected!')
       } catch (e) {
         log('reconnect failed: %s', e.stack)
