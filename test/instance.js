@@ -3,23 +3,28 @@
 /* eslint-env mocha */
 
 const Client = require('..')
-const ID = require('peer-id')
-const IDJSON = require('./id.json')
+const PeerId = require('peer-id')
 const multiaddr = require('multiaddr')
-const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust')
-const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
 
-describe('connect', () => {
+const IDJSON = require('./id.json')
+const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust')
+
+const mockUpgrader = {
+  upgradeInbound: maConn => maConn,
+  upgradeOutbound: maConn => maConn
+}
+
+describe('instance', () => {
   let client
   let conn
   let id
 
   before(async () => {
-    id = await prom(cb => ID.createFromJSON(IDJSON, cb))
+    id = await PeerId.createFromJSON(IDJSON)
   })
 
   it('should be creatable', () => {
-    client = new Client({ id })
+    client = new Client({ upgrader: mockUpgrader, id })
     conn = client.createListener(() => {})
   })
 

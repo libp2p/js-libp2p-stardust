@@ -1,66 +1,61 @@
 'use strict'
 
-const LP = require('./rpc/lp')
+const debug = require('debug')
+const log = debug('libp2p:stardust:listener')
+log.error = debug('libp2p:stardust:listener:error')
+
+const { EventEmitter } = require('events')
+
 const pull = require('pull-stream/pull')
 const handshake = require('pull-handshake')
+
+const crypto = require('crypto')
+const PeerId = require('peer-id')
+const PeerInfo = require('peer-info')
+
+const LP = require('./rpc/lp')
 const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, ErrorTranslations } = require('./rpc/proto')
 
 const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
-
 const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
-
-const crypto = require('crypto')
-const ID = require('peer-id')
-const PeerInfo = require('peer-info')
-
-const debug = require('debug')
-const log = debug('libp2p:stardust:client')
-
-const EventEmitter = require('events').EventEmitter
 
 function translateAndThrow (eCode) {
   throw new Error(ErrorTranslations[eCode] || ('Unknown error #' + eCode + '! Please upgrade libp2p-stardust to the latest version!'))
 }
 
-function noop () { }
-
 const ACK = Buffer.from('01', 'hex')
 
 class Listener extends EventEmitter {
-  constructor (client, handler) {
+  constructor ({ client, handler, upgrader }) {
     super()
     this.client = client
     this.handler = handler
+    this.upgrader = upgrader
   }
 
-  listen (ma, callback) {
-    if (!callback) {
-      callback = noop
-    }
-
-    this._listen(ma).then(() => {
+  async listen (ma) {
+    try {
+      await this._listen(ma)
       this.emit('listening')
-      callback()
-    }, err => {
+    } catch (err) {
       if (this.client.softFail) {
-        this.emit('listening')
-        callback()
         // dials will fail, but that's just about it
-      } else {
-        this.emit('error', err)
-        callback(err)
+        this.emit('listening')
+        return
       }
-    })
+      this.emit('error', err)
+    }
   }
 
-  getAddrs (cb) {
-    cb(null, this.address ? [this.address] : [])
+  getAddrs () {
+    return this.address ? [this.address] : []
   }
 
   close () {
-    if (!this.connected) { return }
+    if (!this.connected) return
     this.connected = false // will prevent new conns, but will keep current ones as interface requires it
     delete this.client.connections[this.aid]
+    this.emit('close')
   }
 
   async _readDiscovery () {
@@ -91,12 +86,12 @@ class Listener extends EventEmitter {
       return
     }
 
-    if (this.client.discovery.enabled) {
+    if (this.client.discovery._isStarted) {
       log('reading discovery')
 
       resp.ids
         .map(id => {
-          const pi = new PeerInfo(new ID(id))
+          const pi = new PeerInfo(new PeerId(id))
           if (pi.id.toB58String() === this.client.id.toB58String()) return
           pi.multiaddrs.add(addrBase.encapsulate('/p2p-stardust/ipfs/' + pi.id.toB58String()))
 
@@ -112,7 +107,8 @@ class Listener extends EventEmitter {
   }
 
   async _listen (address) {
-    if (this.connected) { return }
+    if (this.connected) return
+
     this.address = address
     this.aid = String(this.address.decapsulate('p2p-stardust'))
 
@@ -133,14 +129,18 @@ class Listener extends EventEmitter {
     log('sent rand')
 
     const { error, saltEncrypted } = await rpc.readProto(JoinChallenge)
-    if (error) { translateAndThrow(error) }
-    const saltSecret = await prom(cb => this.client.id.privKey.decrypt(saltEncrypted, cb))
+    if (error) {
+      translateAndThrow(error)
+    }
+    const saltSecret = this.client.id.privKey.decrypt(saltEncrypted)
 
     const solution = sha5(random, saltSecret)
     rpc.writeProto(JoinChallengeSolution, { solution })
 
     const { error: error2 } = await rpc.readProto(JoinVerify)
-    if (error2) { translateAndThrow(error2) }
+    if (error2) {
+      translateAndThrow(error2)
+    }
 
     log('connected')
 
@@ -153,11 +153,11 @@ class Listener extends EventEmitter {
     this._readDiscovery()
   }
 
-  async _dial (addr) {
+  async _dial (addr, options = {}) {
     if (!this.connected) { throw new Error('Server not online!') }
 
     const id = addr.getPeerId()
-    const _id = ID.createFromB58String(id)._id
+    const _id = PeerId.createFromB58String(id)._id
 
     log('dialing %s', id)
 

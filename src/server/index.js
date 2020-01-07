@@ -11,7 +11,7 @@ const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? rejec
 const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
 
 const crypto = require('crypto')
-const ID = require('peer-id')
+const PeerId = require('peer-id')
 
 const debug = require('debug')
 const log = debug('libp2p:stardust:server')
@@ -30,7 +30,7 @@ const handleDial = async (conn, id, server) => {
   const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
 
   const { target } = await rpc.readProto(DialRequest)
-  const targetB58 = new ID(target).toB58String()
+  const targetB58 = new PeerId(target).toB58String()
 
   log('dial from %s to %s', id.toB58String(), targetB58)
 
@@ -104,7 +104,7 @@ class Server {
       log('performing challenge')
 
       const { random128: random, peerID } = await rpc.readProto(JoinInit)
-      const id = await prom(cb => ID.createFromJSON(peerID, cb))
+      const id = await PeerId.createFromJSON(peerID)
 
       if (!Buffer.isBuffer(random) || random.length !== 128) {
         rpc.writeProto(JoinVerify, { error: Error.E_RAND_LENGTH })
@@ -114,7 +114,7 @@ class Server {
       log('got id, challenge for %s', id.toB58String())
 
       const saltSecret = crypto.randomBytes(128)
-      const saltEncrypted = await prom(cb => id.pubKey.encrypt(saltSecret, cb))
+      const saltEncrypted = await id.pubKey.encrypt(saltSecret)
 
       rpc.writeProto(JoinChallenge, { saltEncrypted })
 
