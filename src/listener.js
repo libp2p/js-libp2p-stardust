@@ -13,6 +13,7 @@ const crypto = require('crypto')
 const PeerId = require('peer-id')
 const PeerInfo = require('peer-info')
 
+const MicroSwitch = require('./micro-switch')
 const LP = require('./rpc/lp')
 const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, ErrorTranslations } = require('./rpc/proto')
 
@@ -29,6 +30,7 @@ class Listener extends EventEmitter {
   constructor ({ client, handler, upgrader }) {
     super()
     this.client = client
+    this.switch = new MicroSwitch({ transports: client.libp2p.transports, addresses: [], muxers: client.libp2p.muxers })
     this.handler = handler
     this.upgrader = upgrader
   }
@@ -114,11 +116,11 @@ class Listener extends EventEmitter {
 
     log('connecting to %s', address)
 
-    let conn = await this.client.switch.dial(address.decapsulate('p2p-stardust'))
-    const muxed = await this.client.switch.wrapInMuxer(conn, false)
+    let conn = await this.switch.dial(address.decapsulate('p2p-stardust'))
+    const muxed = await this.switch.wrapInMuxer(conn, false)
 
     conn = await prom(cb => muxed.once('stream', s => cb(null, s)))
-    conn = await this.client.switch.negotiateProtocol(conn, '/p2p/stardust/0.1.0')
+    conn = await this.switch.negotiateProtocol(conn, '/p2p/stardust/0.1.0')
     const rpc = LP(conn)
 
     log('performing challenge')

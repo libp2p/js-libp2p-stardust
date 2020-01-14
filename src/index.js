@@ -10,7 +10,6 @@ const { AbortError } = require('abortable-iterator')
 // const errcode = require('err-code')
 const withIs = require('class-is')
 
-const MicroSwitch = require('./micro-switch')
 const Listener = require('./listener')
 // const mafmt = require('mafmt')
 
@@ -31,15 +30,16 @@ class Stardust {
    * @param {Object} options - Options for the listener
    * @param {Upgrader} options.upgrader
    * @param {PeerId} options.id - Id for the crypto challenge
+   * @param {Libp2p} options.libp2p - Libp2p instance.
    * @param {Transport[]} options.transports - Transport(s) for microswitch
    * @param {Muxer[]} options.muxers - Muxer(s) for microswitch
    * @param {boolean} options.softFail - Whether to softly fail on listen errors
    */
-  constructor ({ upgrader, transports, muxers, id, softFail }) {
+  constructor ({ upgrader, libp2p = {}, id, softFail }) {
     assert(upgrader, 'An upgrader must be provided. See https://github.com/libp2p/interface-transport#upgrader.')
     this._upgrader = upgrader
 
-    this.switch = new MicroSwitch({ transports, addresses: [], muxers })
+    this.libp2p = libp2p
     this.id = id
     this.softFail = softFail
 
