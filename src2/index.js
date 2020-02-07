@@ -10,7 +10,7 @@ const { AbortError } = require('abortable-iterator')
 // const errcode = require('err-code')
 const withIs = require('class-is')
 
-const createListener = require('./listener')
+const Listener = require('./listener')
 // const mafmt = require('mafmt')
 
 const toConnection = require('./socket-to-conn')
@@ -19,8 +19,6 @@ const { CODE_CIRCUIT } = require('./constants')
 function getServerForAddress (addr) {
   return String(addr.decapsulate('p2p-stardust'))
 }
-
-function noop() { }
 
 /**
   * Stardust Transport
@@ -106,9 +104,12 @@ class Stardust {
       options = {}
     }
 
-    handler = handler || noop
-
-    return createListener({ handler, upgrader: this._upgrader }, this, options)
+    return new Listener({
+      handler,
+      upgrader: this._upgrader,
+      client: this,
+      ...options
+    })
   }
 
   /**

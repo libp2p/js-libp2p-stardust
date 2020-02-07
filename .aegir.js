@@ -1,15 +1,14 @@
 'use strict'
 
-const Server = require('./src/server')
+const createServer = require('./src/server')
 let server
 
-function pre (done) {
-  server = new Server({})
-  server.start().then(done, done)
+async function pre () {
+  server = await createServer()
 }
 
-function post (done) {
-  server.stop(done, done)
+function post () {
+  return server.stop()
 }
 
 module.exports = {

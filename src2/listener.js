@@ -1,0 +1,186 @@
+'use strict'
+
+const debug = require('debug')
+const log = debug('libp2p:stardust:listener')
+log.error = debug('libp2p:stardust:listener:error')
+
+const { EventEmitter } = require('events')
+
+const pull = require('pull-stream/pull')
+const handshake = require('pull-handshake')
+
+const crypto = require('crypto')
+const PeerId = require('peer-id')
+const PeerInfo = require('peer-info')
+
+const MicroSwitch = require('./micro-switch')
+const LP = require('./rpc/lp')
+const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DialRequest, DialResponse, ErrorTranslations } = require('./rpc/proto')
+
+const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
+const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
+
+function translateAndThrow (eCode) {
+  throw new Error(ErrorTranslations[eCode] || ('Unknown error #' + eCode + '! Please upgrade libp2p-stardust to the latest version!'))
+}
+
+const ACK = Buffer.from('01', 'hex')
+
+class Listener extends EventEmitter {
+  constructor ({ client, handler, upgrader }) {
+    super()
+    this.client = client
+    this.switch = new MicroSwitch({ transports: client.libp2p.transports, addresses: [], muxers: client.libp2p.muxers })
+    this.handler = handler
+    this.upgrader = upgrader
+  }
+
+  async listen (ma) {
+    try {
+      await this._listen(ma)
+      this.emit('listening')
+    } catch (err) {
+      if (this.client.softFail) {
+        // dials will fail, but that's just about it
+        this.emit('listening')
+        return
+      }
+      this.emit('error', err)
+    }
+  }
+
+  getAddrs () {
+    return this.address ? [this.address] : []
+  }
+
+  close () {
+    if (!this.connected) return
+    this.connected = false // will prevent new conns, but will keep current ones as interface requires it
+    delete this.client.connections[this.aid]
+    this.emit('close')
+  }
+
+  async _readDiscovery () {
+    const addrBase = this.address.decapsulate('p2p-stardust')
+
+    let resp
+
+    try {
+      resp = await this.rpc.readProto(Discovery) // this will wait for 30s. usually after 10s response should come in, but always check because join events trigger this as well
+      await this.rpc.write(ACK)
+    } catch (e) {
+      log('failed to read discovery: %s', e.stack)
+      log('assume disconnected!')
+
+      this.connected = false
+      this.rpc = null
+      this.muxed = null
+
+      log('reconnecting')
+
+      try {
+        await this._listen(this.address)
+        log('reconnected!')
+      } catch (e) {
+        log('reconnect failed: %s', e.stack)
+      }
+
+      return
+    }
+
+    if (this.client.discovery._isStarted) {
+      log('reading discovery')
+
+      resp.ids
+        .map(id => {
+          const pi = new PeerInfo(new PeerId(id))
+          if (pi.id.toB58String() === this.client.id.toB58String()) return
+          pi.multiaddrs.add(addrBase.encapsulate('/p2p-stardust/ipfs/' + pi.id.toB58String()))
+
+          return pi
+        })
+        .filter(Boolean)
+        .forEach(pi => this.client.discovery.emit('peer', pi))
+    } else {
+      log('reading discovery, but tossing data since it\'s not enabled')
+    }
+
+    setTimeout(() => this._readDiscovery(), 100) // cooldown
+  }
+
+  async _listen (address) {
+    if (this.connected) return
+
+    this.address = address
+    this.aid = String(this.address.decapsulate('p2p-stardust'))
+
+    log('connecting to %s', address)
+
+    let conn = await this.switch.dial(address.decapsulate('p2p-stardust'))
+    const muxed = await this.switch.wrapInMuxer(conn, false)
+
+    conn = await prom(cb => muxed.once('stream', s => cb(null, s)))
+    conn = await this.switch.negotiateProtocol(conn, '/p2p/stardust/0.1.0')
+    const rpc = LP(conn)
+
+    log('performing challenge')
+
+    const random = crypto.randomBytes(128)
+    rpc.writeProto(JoinInit, { random128: random, peerID: this.client.id.toJSON() })
+
+    log('sent rand')
+
+    const { error, saltEncrypted } = await rpc.readProto(JoinChallenge)
+    if (error) {
+      translateAndThrow(error)
+    }
+    const saltSecret = this.client.id.privKey.decrypt(saltEncrypted)
+
+    const solution = sha5(random, saltSecret)
+    rpc.writeProto(JoinChallengeSolution, { solution })
+
+    const { error: error2 } = await rpc.readProto(JoinVerify)
+    if (error2) {
+      translateAndThrow(error2)
+    }
+
+    log('connected')
+
+    this.connected = true
+    this.muxed = muxed
+    this.rpc = rpc
+    this.client.connections[this.aid] = this
+
+    muxed.on('stream', this.handler)
+    this._readDiscovery()
+  }
+
+  async _dial (addr, options = {}) {
+    if (!this.connected) { throw new Error('Server not online!') }
+
+    const id = addr.getPeerId()
+    const _id = PeerId.createFromB58String(id)._id
+
+    log('dialing %s', id)
+
+    const conn = await prom(cb => this.muxed.newStream(cb))
+
+    const stream = handshake()
+    pull(
+      conn,
+      stream,
+      conn
+    )
+
+    const shake = stream.handshake
+    const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
+
+    rpc.writeProto(DialRequest, { target: _id })
+    const { error } = await rpc.readProto(DialResponse)
+    if (error) { translateAndThrow(error) }
+
+    return shake.rest()
+  }
+}
+
+module.exports = Listener

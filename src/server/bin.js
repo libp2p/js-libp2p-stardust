@@ -4,25 +4,22 @@
 
 /* eslint-disable no-console */
 
-const Server = require('.')
+const createServer = require('.')
 
-let addresses = process.argv.slice(2)
-if (!addresses.length) { addresses = null } // use default if none provided
+async function run() {
+  let addresses = process.argv.slice(2)
+  if (!addresses.length) { addresses = null } // use default if none provided
 
-const server = new Server({ addresses })
-server.start().then(() => {
-  server.switch.addresses.map(String).forEach(addr => console.log('Listening on %s', addr))
-}, err)
+  const server = await createServer()
 
-function stop () {
-  console.log('Stopping...')
-  server.stop().then(() => process.exit(0), err)
+  const stop = async () => {
+    console.log('Stopping...')
+    await server.stop()
+    process.exit(0)
+  }
+
+  process.on('SIGTERM', stop)
+  process.on('SIGINT', stop)
 }
 
-function err (err) {
-  console.error(err.stack)
-  process.exit(2)
-}
-
-process.on('SIGTERM', stop)
-process.on('SIGINT', stop)
+run()

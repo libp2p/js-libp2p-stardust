@@ -1,114 +1,112 @@
 'use strict'
 
-const MicroSwitch = require('../micro-switch')
-const LP = require('../rpc/lp')
-const pull = require('pull-stream/pull')
-const handshake = require('pull-handshake')
-const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, Error } = require('../rpc/proto')
-
-const prom = (f) => new Promise((resolve, reject) => f((err, res) => err ? reject(err) : resolve(res)))
-
-const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
-
-const crypto = require('crypto')
-const PeerId = require('peer-id')
-
 const debug = require('debug')
 const log = debug('libp2p:stardust:server')
 
-const handleDial = async (conn, id, server) => {
-  const stream = handshake()
-  pull(
-    conn,
-    stream,
-    conn
-  )
+const Libp2p = require('libp2p')
+const Transport = require('libp2p-websockets')
+const Muxer = require('libp2p-mplex')
+const Crypto = require('libp2p-secio')
 
-  log('incomming dial')
+const crypto = require('crypto')
+const delay = require('delay')
 
-  const shake = stream.handshake
-  const rpc = LP.wrap(shake, LP.writeWrap(shake.write))
+const Wrap = require('it-pb-rpc')
+const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
+const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, ErrorTranslations } = require('../proto')
 
-  const { target } = await rpc.readProto(DialRequest)
-  const targetB58 = new PeerId(target).toB58String()
+const multiaddr = require('multiaddr')
+const PeerId = require('peer-id')
 
-  log('dial from %s to %s', id.toB58String(), targetB58)
+const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
 
-  const targetPeer = server.network[targetB58]
-
-  if (!targetPeer) {
-    return rpc.writeProto(DialResponse, { error: Error.E_TARGET_UNREACHABLE })
-  }
-
-  try {
-    const conn = await newMuxConn(targetPeer.muxed)
-    rpc.writeProto(DialResponse, {})
-
-    pull(conn, shake.rest(), conn)
-  } catch (e) {
-    return rpc.writeProto(DialResponse, { error: Error.E_GENERIC })
-  }
-}
-
-const newMuxConn = (muxed) => prom(cb => muxed.newStream(cb))
-const sleep = (i) => new Promise((resolve, reject) => setTimeout(resolve, i))
-
-const checkAckLoop = async (rpc, onEnd) => {
+const checkAckLoop = async (wrappedStream, onEnd) => {
   try {
     while (true) {
-      await rpc.readProto(DiscoveryAck)
-      await sleep(100)
+      console.log('read PB ACK 1')
+      await wrappedStream.readPB(DiscoveryAck)
+      console.log('read PB ACK 2')
+      await delay(100)
     }
   } catch (err) { // we'll get here after a disconnect
+  console.log('onEND', err)
     onEnd()
   }
 }
 
-class Server {
-  constructor ({ transports, addresses, muxers }) {
-    this.switch = new MicroSwitch({ transports, addresses, muxers, handler: this.handler.bind(this) })
+module.exports = async (addresses) => {
+  const peerAddr = addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
+  const network = {}
+  let networkArray = []
+  let _cachedDiscovery = Buffer.from('01', 'hex')
 
-    this.network = {}
-    this.networkArray = []
-    this._emptyCachedDiscovery = this._cachedDiscovery = Buffer.from('01', 'hex')
+  const libp2p = await Libp2p.create({
+    modules: {
+      transport: [Transport],
+      streamMuxer: [Muxer],
+      connEncryption: [Crypto]
+    }
+  })
 
-    this.switch.protos.addHandler('/p2p/stardust/0.1.0', (protocol, conn) => {
-      log('adding handler for stardust v0.1.0')
+  peerAddr.forEach((addr) => {
+    libp2p.peerInfo.multiaddrs.add(addr)
+  })
 
-      try {
-        this.handlerV010(conn, conn.info.info.muxed)
-      } catch (err) {
-        log(err)
-      }
+  await libp2p.start()
+
+  const broadcastDiscovery = () => {
+    console.log('broadcast')
+    log('broadcasting discovery to %o client(s)', networkArray.length)
+    networkArray.forEach(client => {
+      client.wrappedStream.writePB(_cachedDiscovery, Discovery)
     })
   }
 
-  async handler (conn) {
-    log('new connection')
-
-    try {
-      const muxed = await this.switch.wrapInMuxer(conn, true) // add muxer ontop of raw socket
-      conn = await newMuxConn(muxed) // get a muxed connection
-
-      conn.muxed = muxed
-      await this.switch.negotiateProtocol(conn)
-    } catch (err) {
-      log(err)
-    }
+  const update = () => {
+    log('updating cached data')
+    networkArray = Object.keys(network).map(b58 => network[b58])
+    _cachedDiscovery = networkArray.length ? { ids: networkArray.map(client => client.id._id) } : { ids: [] }
   }
 
-  async handlerV010 (conn, muxed) {
-    const rpc = LP(conn) // turn into length-prefixed rpc interface
+  const removeFromNetwork = (client) => {
+    log('removing %s from network', client.id.toB58String())
+
+    delete network[client.id.toB58String()]
+
+    update()
+    broadcastDiscovery()
+  }
+
+  const addToNetwork = (wrappedStream, id) => {
+    log('adding %s to network', id.toB58String())
+
+    // TODO
+
+    const client = network[id.toB58String()] = {
+      id,
+      wrappedStream
+    }
+    checkAckLoop(wrappedStream, () => removeFromNetwork(client))
+
+    update()
+    broadcastDiscovery()
+  }
+
+  const handler = async ({ stream, connection }) => {
+    const wrapped = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
 
     try {
       log('performing challenge')
 
-      const { random128: random, peerID } = await rpc.readProto(JoinInit)
+      const { random128: random, peerID } = await wrapped.readPB(JoinInit)
       const id = await PeerId.createFromJSON(peerID)
 
       if (!Buffer.isBuffer(random) || random.length !== 128) {
-        rpc.writeProto(JoinVerify, { error: Error.E_RAND_LENGTH })
-        return muxed.end()
+        wrapped.writePP({ error: Error.E_RAND_LENGTH }, JoinVerify)
+
+        // close the stream, no need to wait
+        stream.sink([])
+        return
       }
 
       log('got id, challenge for %s', id.toB58String())
@@ -116,74 +114,35 @@ class Server {
       const saltSecret = crypto.randomBytes(128)
       const saltEncrypted = await id.pubKey.encrypt(saltSecret)
 
-      rpc.writeProto(JoinChallenge, { saltEncrypted })
+      await wrapped.writePB({ saltEncrypted }, JoinChallenge)
 
       const solution = sha5(random, saltSecret)
-      const { solution: solutionClient } = await rpc.readProto(JoinChallengeSolution)
+      const { solution: solutionClient } = await wrapped.readPB(JoinChallengeSolution)
 
       if (solution.toString('hex') !== solutionClient.toString('hex')) {
-        rpc.writeProto(JoinVerify, { error: Error.E_INCORRECT_SOLUTION })
-        return muxed.end()
+        wrapped.writePP({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
+
+        // close the stream, no need to wait
+        stream.sink([])
+        return
       }
 
-      rpc.writeProto(JoinVerify, {})
+      await wrapped.writePB({}, JoinVerify)
 
-      this.addToNetwork(muxed, rpc, id)
-    } catch (err) {
-      log(err)
-      rpc.writeProto(JoinVerify, { error: Error.E_GENERIC }) // if anything fails, respond with generic error
-      return muxed.end()
+      addToNetwork(wrapped, id)
+    } catch (error) {
+      wrapped.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
+
+      // close the stream, no need to wait
+      stream.sink([])
     }
   }
 
-  addToNetwork (muxed, rpc, id) {
-    log('adding %s to network', id.toB58String())
+  libp2p.handle('/p2p/stardust/0.1.0', handler)
 
-    muxed.on('stream', (conn) => handleDial(conn, id, this))
+  // const discoveryInterval = setInterval(() => broadcastDiscovery, 1000) // setInterval(broadcastDiscovery, 10 * 1000)
+  // clearInterval(this.discoveryInterval)
+  // TODO: make class instead
 
-    checkAckLoop(rpc, () => this.removeFromNetwork(client))
-
-    const client = this.network[id.toB58String()] = {
-      id,
-      muxed,
-      rpc
-    }
-
-    this.update()
-    this.broadcastDiscovery()
-  }
-
-  removeFromNetwork (client) {
-    log('removing %s from network', client.id.toB58String())
-
-    delete this.network[client.id.toB58String()]
-
-    this.update()
-    this.broadcastDiscovery()
-  }
-
-  update () {
-    log('updating cached data')
-    this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
-    this._cachedDiscovery = this.networkArray.length ? Discovery.encode({ ids: this.networkArray.map(client => client.id._id) }) : this._emptyCachedDiscovery
-  }
-
-  broadcastDiscovery () {
-    log('broadcasting discovery to %o client(s)', this.networkArray.length)
-    this.networkArray.forEach(client => {
-      client.rpc.write(this._cachedDiscovery)
-    })
-  }
-
-  async start () {
-    this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
-    await this.switch.startListen()
-  }
-
-  async stop () {
-    clearInterval(this.discoveryInterval)
-    await this.switch.stopListen()
-  }
+  return libp2p
 }
-
-module.exports = Server
