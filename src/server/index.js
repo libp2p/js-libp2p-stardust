@@ -29,120 +29,153 @@ const checkAckLoop = async (wrappedStream, onEnd) => {
       await delay(100)
     }
   } catch (err) { // we'll get here after a disconnect
-  console.log('onEND', err)
+    console.log('onEND', err)
     onEnd()
   }
 }
 
-module.exports = async (addresses) => {
-  const peerAddr = addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
-  const network = {}
-  let networkArray = []
-  let _cachedDiscovery = Buffer.from('01', 'hex')
+/**
+* Stardust Transport Server
+* @class
+*/
+class Server {
+  /**
+   * @constructor
+   * @param {Object} options - Options for the listener
+   * @param {Array<multiaddr>} options.addresses
+   */
+  constructor (opts = {}) {
+    this.peerAddr = opts.addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
+    this.network = {}
+    this.networkArray = []
+    this._cachedDiscovery = Buffer.from('01', 'hex')
 
-  const libp2p = await Libp2p.create({
-    modules: {
-      transport: [Transport],
-      streamMuxer: [Muxer],
-      connEncryption: [Crypto]
-    }
-  })
-
-  peerAddr.forEach((addr) => {
-    libp2p.peerInfo.multiaddrs.add(addr)
-  })
-
-  await libp2p.start()
-
-  const broadcastDiscovery = () => {
-    console.log('broadcast')
-    log('broadcasting discovery to %o client(s)', networkArray.length)
-    networkArray.forEach(client => {
-      client.wrappedStream.writePB(_cachedDiscovery, Discovery)
-    })
+    this.libp2p = undefined
   }
 
-  const update = () => {
-    log('updating cached data')
-    networkArray = Object.keys(network).map(b58 => network[b58])
-    _cachedDiscovery = networkArray.length ? { ids: networkArray.map(client => client.id._id) } : { ids: [] }
-  }
-
-  const removeFromNetwork = (client) => {
+  removeFromNetwork (client) {
     log('removing %s from network', client.id.toB58String())
 
-    delete network[client.id.toB58String()]
+    delete this.network[client.id.toB58String()]
 
-    update()
-    broadcastDiscovery()
+    this.update()
+    this.broadcastDiscovery()
   }
 
-  const addToNetwork = (wrappedStream, id) => {
+  addToNetwork (wrappedStream, id) {
     log('adding %s to network', id.toB58String())
 
     // TODO
 
-    const client = network[id.toB58String()] = {
+    const client = this.network[id.toB58String()] = {
       id,
       wrappedStream
     }
-    checkAckLoop(wrappedStream, () => removeFromNetwork(client))
+    checkAckLoop(wrappedStream, () => this.removeFromNetwork(client))
 
-    update()
-    broadcastDiscovery()
+    this.update()
+    this.broadcastDiscovery()
   }
 
-  const handler = async ({ stream, connection }) => {
-    const wrapped = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
+  /**
+   * Update discovery data
+   */
+  update() {
+    log('updating cached data')
+    this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
+    this._cachedDiscovery = this.networkArray.length ? { ids: this.networkArray.map(client => client.id._id) } : { ids: [] }
+  }
 
-    try {
-      log('performing challenge')
+  /**
+   * Broadcast discovery data
+   */
+  broadcastDiscovery() {
+    console.log('broadcast')
+    log('broadcasting discovery to %o client(s)', this.networkArray.length)
+    this.networkArray.forEach(client => {
+      client.wrappedStream.writePB(this._cachedDiscovery, Discovery)
+    })
+  }
 
-      const { random128: random, peerID } = await wrapped.readPB(JoinInit)
-      const id = await PeerId.createFromJSON(peerID)
+  /**
+   * Start stardust server, libp2p and discovery.
+   * Add a libp2p handler for stardust protocol.
+   */
+  async start () {
+    this.libp2p = await Libp2p.create({
+      modules: {
+        transport: [Transport],
+        streamMuxer: [Muxer],
+        connEncryption: [Crypto]
+      }
+    })
 
-      if (!Buffer.isBuffer(random) || random.length !== 128) {
-        wrapped.writePP({ error: Error.E_RAND_LENGTH }, JoinVerify)
+    this.peerAddr.forEach((addr) => {
+      this.libp2p.peerInfo.multiaddrs.add(addr)
+    })
+
+    await this.libp2p.start()
+
+    const handler = async ({ stream }) => {
+      const wrapped = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
+
+      try {
+        log('performing challenge')
+
+        const { random128: random, peerID } = await wrapped.readPB(JoinInit)
+        const id = await PeerId.createFromJSON(peerID)
+
+        if (!Buffer.isBuffer(random) || random.length !== 128) {
+          wrapped.writePP({ error: Error.E_RAND_LENGTH }, JoinVerify)
+
+          // close the stream, no need to wait
+          stream.sink([])
+          return
+        }
+
+        log('got id, challenge for %s', id.toB58String())
+
+        const saltSecret = crypto.randomBytes(128)
+        const saltEncrypted = await id.pubKey.encrypt(saltSecret)
+
+        await wrapped.writePB({ saltEncrypted }, JoinChallenge)
+
+        const solution = sha5(random, saltSecret)
+        const { solution: solutionClient } = await wrapped.readPB(JoinChallengeSolution)
+
+        if (solution.toString('hex') !== solutionClient.toString('hex')) {
+          wrapped.writePP({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
+
+          // close the stream, no need to wait
+          stream.sink([])
+          return
+        }
+
+        await wrapped.writePB({}, JoinVerify)
+
+        this.addToNetwork(wrapped, id)
+      } catch (error) {
+        log(error)
+        wrapped.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
 
         // close the stream, no need to wait
         stream.sink([])
-        return
       }
+    }
 
-      log('got id, challenge for %s', id.toB58String())
+    this.libp2p.handle('/p2p/stardust/0.1.0', handler)
+    // this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
+  }
 
-      const saltSecret = crypto.randomBytes(128)
-      const saltEncrypted = await id.pubKey.encrypt(saltSecret)
-
-      await wrapped.writePB({ saltEncrypted }, JoinChallenge)
-
-      const solution = sha5(random, saltSecret)
-      const { solution: solutionClient } = await wrapped.readPB(JoinChallengeSolution)
-
-      if (solution.toString('hex') !== solutionClient.toString('hex')) {
-        wrapped.writePP({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
-
-        // close the stream, no need to wait
-        stream.sink([])
-        return
-      }
-
-      await wrapped.writePB({}, JoinVerify)
-
-      addToNetwork(wrapped, id)
-    } catch (error) {
-      wrapped.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
-
-      // close the stream, no need to wait
-      stream.sink([])
+  /**
+   * Stop libp2p node and discovery.
+   */
+  async stop () {
+    // clearInterval(this.discoveryInterval)
+    if (this.libp2p) {
+      await this.libp2p.stop()
     }
   }
-
-  libp2p.handle('/p2p/stardust/0.1.0', handler)
-
-  // const discoveryInterval = setInterval(() => broadcastDiscovery, 1000) // setInterval(broadcastDiscovery, 10 * 1000)
-  // clearInterval(this.discoveryInterval)
-  // TODO: make class instead
-
-  return libp2p
 }
+
+module.exports = Server

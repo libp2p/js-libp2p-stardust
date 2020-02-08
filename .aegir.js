@@ -1,10 +1,11 @@
 'use strict'
 
-const createServer = require('./src/server')
+const Server = require('./src/server')
 let server
 
 async function pre () {
-  server = await createServer()
+  server = new Server()
+  await server.start()
 }
 
 function post () {

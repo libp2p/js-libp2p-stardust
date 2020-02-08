@@ -39,7 +39,7 @@
     "it-buffer": "^0.1.1",
     "it-handshake": "^1.0.1",
     "it-length-prefixed": "^3.0.0",
-    "it-pb-rpc": "vasco-santos/it-pb-rpc#fix/read-pb-using-read-lp",
+    "it-pb-rpc": "^0.1.5",
     "libp2p-crypto": "~0.16.3",
     "libp2p-mplex": "^0.9.3",
     "libp2p-secio": "^0.12.2",

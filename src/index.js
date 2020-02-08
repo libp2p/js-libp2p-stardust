@@ -5,14 +5,12 @@ const log = debug('libp2p:stardust')
 log.error = debug('libp2p:stardust:error')
 
 const assert = require('assert')
+const withIs = require('class-is')
 const { EventEmitter } = require('events')
 const { AbortError } = require('abortable-iterator')
-// const errcode = require('err-code')
-const withIs = require('class-is')
-
-const createListener = require('./listener')
 // const mafmt = require('mafmt')
 
+const Listener = require('./listener')
 const toConnection = require('./socket-to-conn')
 const { CODE_CIRCUIT } = require('./constants')
 
@@ -23,9 +21,9 @@ function getServerForAddress (addr) {
 function noop() { }
 
 /**
-  * Stardust Transport
-  * @class
-  */
+* Stardust Transport
+* @class
+*/
 class Stardust {
   /**
    * @constructor
@@ -108,7 +106,12 @@ class Stardust {
 
     handler = handler || noop
 
-    return createListener({ handler, upgrader: this._upgrader }, this, options)
+    return new Listener({
+      handler,
+      upgrader: this._upgrader,
+      client: this,
+      options
+    })
   }
 
   /**
