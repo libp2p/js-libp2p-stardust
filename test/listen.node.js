@@ -8,9 +8,9 @@ const expect = chai.expect
 chai.use(dirtyChai)
 
 const multiaddr = require('multiaddr')
-const PeerId = require('peer-id')
-const Stardust = require('..')
+const Stardust = require('../src')
 
+const { createPeer } = require('./utils')
 const mockUpgrader = {
   upgradeInbound: maConn => maConn,
   upgradeOutbound: maConn => maConn
@@ -21,8 +21,8 @@ describe('listen', () => {
   let stardust
 
   beforeEach(async () => {
-    const id = await PeerId.createFromJSON(require('./id.json'))
-    stardust = new Stardust({ id, upgrader: mockUpgrader })
+    const [libp2p] = await createPeer()
+    stardust = new Stardust({ upgrader: mockUpgrader, id: libp2p.peerInfo.id, libp2p })
   })
 
   it('listen, check for promise', async () => {

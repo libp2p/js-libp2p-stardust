@@ -8,12 +8,9 @@ const expect = chai.expect
 chai.use(dirtyChai)
 
 const pipe = require('it-pipe')
-const delay = require('delay')
 const { collect } = require('streaming-iterables')
 
 const multiaddr = require('multiaddr')
-const PeerId = require('peer-id')
-const PeerInfo = require('peer-info')
 const Stardust = require('../src')
 
 const { createPeer } = require('./utils')
@@ -26,15 +23,10 @@ const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust')
 describe.only('dial', () => {
   let clients = []
   let listeners = []
-  let peers = []
 
   before(async () => {
     const peers = await createPeer({
       number: 2
-    })
-
-    peers.forEach((peer) => {
-
     })
 
     clients = peers.map((libp2p) => new Stardust({ upgrader: mockUpgrader, id: libp2p.peerInfo.id, libp2p }))
@@ -51,7 +43,7 @@ describe.only('dial', () => {
     this.timeout(20 * 1000)
 
     const ma = multiaddr(listeners[1].address.toString() + clients[1].addr.toString())
-    
+
     const conn = await clients[0].dial(ma)
     const data = Buffer.from('some data')
 
@@ -63,5 +55,19 @@ describe.only('dial', () => {
 
     expect(values[0].slice()).to.eql(data)
     // expect(values).to.eql([data])
+  })
+
+  it('dial offline / non-exist()ent node on IPv4, check promise rejected', async function () {
+    this.timeout(20 * 1000)
+    const maOffline = multiaddr('/ip4/127.0.0.1/tcp/15555/ws/p2p-stardust/p2p/QmcgpsyWgH8Y8ajJz1Cu72KnS5uo2Aa2LpzU7kinSooo2f')
+
+    try {
+      await clients[0].dial(maOffline)
+    } catch (err) {
+      expect(err).to.exist()
+      return
+    }
+
+    throw new Error('dial did not fail')
   })
 })
