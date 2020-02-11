@@ -14,7 +14,7 @@ const delay = require('delay')
 const Wrap = require('it-pb-rpc')
 const pipe = require('it-pipe')
 const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
-const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, ErrorTranslations } = require('../proto')
+const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, Error } = require('../proto')
 
 const multiaddr = require('multiaddr')
 const PeerId = require('peer-id')
@@ -41,14 +41,17 @@ class Server {
    * @constructor
    * @param {Object} options - Options for the listener
    * @param {Array<multiaddr>} options.addresses
-   * @param {Array<multiaddr>} options.addresses
-   * @param {Array<multiaddr>} options.addresses
+   * @param {Array<Transport>} options.transports
+   * @param {Array<Multiplexer>} options.muxers
+   * @param {Array<Encryption>} options.encryption
+   * @param {PeerInfo} options.peerInfo
    */
   constructor ({
     addresses = [multiaddr('/ip6/::/tcp/5892/ws')],
     transports = [Transport],
     muxers = [Muxer],
-    encryption = [Secio]
+    encryption = [Secio],
+    peerInfo
   } = {}) {
     this.peerAddr = addresses
     this.network = {}
@@ -59,6 +62,7 @@ class Server {
     this._transports = transports
     this._muxers = muxers
     this._encryption = encryption
+    this._peerInfo = peerInfo
   }
 
   removeFromNetwork (client) {
@@ -87,7 +91,7 @@ class Server {
   /**
    * Update discovery data
    */
-  update() {
+  update () {
     log('updating cached data')
     this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
     this._cachedDiscovery = this.networkArray.length ? { ids: this.networkArray.map(client => client.id._id) } : { ids: [] }
@@ -96,7 +100,7 @@ class Server {
   /**
    * Broadcast discovery data
    */
-  broadcastDiscovery() {
+  broadcastDiscovery () {
     log('broadcasting discovery to %o client(s)', this.networkArray.length)
     this.networkArray.forEach(client => {
       client.wrappedStream.writePB(this._cachedDiscovery, Discovery)
@@ -164,6 +168,7 @@ class Server {
    */
   async start () {
     this.libp2p = await Libp2p.create({
+      peerInfo: this._peerInfo,
       modules: {
         transport: [Transport],
         streamMuxer: [Muxer],

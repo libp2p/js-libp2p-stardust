@@ -4,18 +4,18 @@
 const testsTransport = require('libp2p-interfaces/src/transport/tests')
 const testsDiscovery = require('libp2p-interfaces/src/peer-discovery/tests')
 const multiaddr = require('multiaddr')
-const PeerId = require('peer-id')
 
 const Stardust = require('../src')
+const { createPeer } = require('./utils')
 
 describe.skip('interface-transport compliance', () => {
   testsTransport({
     async setup ({ upgrader }) {
-      const id = await PeerId.createFromJSON(require('./id.json'))
-      const stardust = new Stardust({ upgrader, id })
+      const [libp2p] = await createPeer()
+      const stardust = new Stardust({ upgrader, id: libp2p.peerInfo.id, libp2p })
 
       const base = (id) => {
-        return `/ip4/127.0.0.1/tcp/15555/ws/p2p-stardust/p2p/${id}`
+        return `/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust/p2p/${id}`
       }
 
       const addrs = [
@@ -42,9 +42,8 @@ describe('interface-discovery compliance', () => {
         upgradeInbound: maConn => maConn,
         upgradeOutbound: maConn => maConn
       }
-      const id = await PeerId.createFromJSON(require('./id.json'))
-
-      const stardust = new Stardust({ upgrader: mockUpgrader, id })
+      const [libp2p] = await createPeer()
+      const stardust = new Stardust({ upgrader: mockUpgrader, id: libp2p.peerInfo.id, libp2p })
 
       return stardust.discovery
     }

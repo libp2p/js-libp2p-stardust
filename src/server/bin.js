@@ -4,13 +4,15 @@
 
 /* eslint-disable no-console */
 
-const createServer = require('.')
+const Server = require('.')
 
-async function run() {
+async function run () {
   let addresses = process.argv.slice(2)
-  if (!addresses.length) { addresses = null } // use default if none provided
+  if (!addresses.length) { addresses = undefined } // use default if none provided
 
-  const server = await createServer()
+  const server = new Server({ addresses })
+
+  await server.start()
 
   const stop = async () => {
     console.log('Stopping...')

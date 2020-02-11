@@ -2,15 +2,13 @@
 
 /* eslint-env mocha */
 
-const multiaddr = require('multiaddr')
 const Stardust = require('../src')
 
-const { createPeer } = require('./utils')
+const { createPeer, SERVER_URL } = require('./utils')
 const mockUpgrader = {
   upgradeInbound: maConn => maConn,
   upgradeOutbound: maConn => maConn
 }
-const SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust')
 
 describe('instance', () => {
   let client

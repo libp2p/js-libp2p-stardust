@@ -18,7 +18,7 @@ function getServerForAddress (addr) {
   return String(addr.decapsulate('p2p-stardust'))
 }
 
-function noop() { }
+function noop () { }
 
 /**
 * Stardust Transport
@@ -94,7 +94,7 @@ class Stardust {
   }
 
   /**
-   * Creates a Websockets listener. The provided `handler` function will be called
+   * Creates a stardust listener. The provided `handler` function will be called
    * anytime a new incoming Connection has been successfully upgraded via
    * `upgrader.upgradeInbound`.
    * @param {object} [options]
@@ -134,6 +134,7 @@ class Stardust {
         return true
       }
 
+      // TODO
       // return mafmt.Stardust.matches(ma)
     })
   }

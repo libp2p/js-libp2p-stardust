@@ -2,39 +2,6 @@
 
 const protons = require('protons')
 
-// module.exports = protons(`
-// message Stardust {
-//   enum Type { // RPC identifier
-//     JOIN_INIT: 0;
-//     JOIN_CHALLENGE: 1;
-//     JOIN_CHALLENGE_SOLUTION: 2;
-//     JOIN_VERIFY: 3;
-//     DISCOVERY: 4;
-//     DISCOVERY_ACK: 5;
-//     DIAL_REQUEST: 6;
-//     DIAL_RESPONSE: 7;
-//   }
-
-//   enum Error {
-//     OK                   = 0;
-//     E_RAND_LENGTH        = 100; // random128 has mismatching length
-//     E_INCORRECT_SOLUTION = 101;
-//     E_GENERIC            = 999; // something(TM) went wrong
-//   }
-
-//   message PeerID {
-//     string id = 1;
-//     string pubKey = 2;
-//   }
-
-//   required Type type = 1;
-//   optional bytes data = 2;
-//   optional PeerID peerID = 3;
-//   repeated bytes ids = 4;
-//   optional Error error = 5;
-// }
-// `)
-
 module.exports = protons(`
 enum Error {
   OK                   = 0;

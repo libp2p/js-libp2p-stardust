@@ -3,12 +3,14 @@
 const abortable = require('abortable-iterator')
 const log = require('debug')('libp2p:circuit:stream')
 
+// TODO: move to libp2p-utils!!
+
 // Convert a duplex iterable into a MultiaddrConnection
 // https://github.com/libp2p/interface-transport#multiaddrconnection
 module.exports = ({ stream, remoteAddr, localAddr }, options = {}) => {
   const { sink, source } = stream
   const maConn = {
-    async sink(source) {
+    async sink (source) {
       if (options.signal) {
         source = abortable(source, options.signal)
       }
@@ -33,13 +35,13 @@ module.exports = ({ stream, remoteAddr, localAddr }, options = {}) => {
     remoteAddr,
     timeline: { open: Date.now() },
 
-    close() {
+    close () {
       sink([])
       close()
     }
   }
 
-  function close() {
+  function close () {
     if (!maConn.timeline.close) {
       maConn.timeline.close = Date.now()
     }
