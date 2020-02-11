@@ -6,12 +6,13 @@ const log = debug('libp2p:stardust:server')
 const Libp2p = require('libp2p')
 const Transport = require('libp2p-websockets')
 const Muxer = require('libp2p-mplex')
-const Crypto = require('libp2p-secio')
+const Secio = require('libp2p-secio')
 
 const crypto = require('crypto')
 const delay = require('delay')
 
 const Wrap = require('it-pb-rpc')
+const pipe = require('it-pipe')
 const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
 const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, ErrorTranslations } = require('../proto')
 
@@ -23,13 +24,10 @@ const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
 const checkAckLoop = async (wrappedStream, onEnd) => {
   try {
     while (true) {
-      console.log('read PB ACK 1')
       await wrappedStream.readPB(DiscoveryAck)
-      console.log('read PB ACK 2')
       await delay(100)
     }
   } catch (err) { // we'll get here after a disconnect
-    console.log('onEND', err)
     onEnd()
   }
 }
@@ -43,34 +41,43 @@ class Server {
    * @constructor
    * @param {Object} options - Options for the listener
    * @param {Array<multiaddr>} options.addresses
+   * @param {Array<multiaddr>} options.addresses
+   * @param {Array<multiaddr>} options.addresses
    */
-  constructor (opts = {}) {
-    this.peerAddr = opts.addresses || [multiaddr('/ip6/::/tcp/5892/ws')]
+  constructor ({
+    addresses = [multiaddr('/ip6/::/tcp/5892/ws')],
+    transports = [Transport],
+    muxers = [Muxer],
+    encryption = [Secio]
+  } = {}) {
+    this.peerAddr = addresses
     this.network = {}
     this.networkArray = []
-    this._cachedDiscovery = Buffer.from('01', 'hex')
+    this._cachedDiscovery = {}
 
     this.libp2p = undefined
+    this._transports = transports
+    this._muxers = muxers
+    this._encryption = encryption
   }
 
   removeFromNetwork (client) {
     log('removing %s from network', client.id.toB58String())
 
     delete this.network[client.id.toB58String()]
-
     this.update()
     this.broadcastDiscovery()
   }
 
-  addToNetwork (wrappedStream, id) {
+  addToNetwork (connection, wrappedStream, id) {
     log('adding %s to network', id.toB58String())
-
-    // TODO
 
     const client = this.network[id.toB58String()] = {
       id,
+      connection,
       wrappedStream
     }
+
     checkAckLoop(wrappedStream, () => this.removeFromNetwork(client))
 
     this.update()
@@ -90,11 +97,65 @@ class Server {
    * Broadcast discovery data
    */
   broadcastDiscovery() {
-    console.log('broadcast')
     log('broadcasting discovery to %o client(s)', this.networkArray.length)
     this.networkArray.forEach(client => {
       client.wrappedStream.writePB(this._cachedDiscovery, Discovery)
     })
+  }
+
+  async _register (random, id, wrappedStream, stream) {
+    log('performing challenge')
+
+    if (!Buffer.isBuffer(random) || random.length !== 128) {
+      wrappedStream.writePP({ error: Error.E_RAND_LENGTH }, JoinVerify)
+
+      // close the stream, no need to wait
+      stream.sink([])
+      return
+    }
+
+    log('got id, challenge for %s', id.toB58String())
+
+    const saltSecret = crypto.randomBytes(128)
+    const saltEncrypted = await id.pubKey.encrypt(saltSecret)
+
+    await wrappedStream.writePB({ saltEncrypted }, JoinChallenge)
+
+    const solution = sha5(random, saltSecret)
+    const { solution: solutionClient } = await wrappedStream.readPB(JoinChallengeSolution)
+
+    if (solution.toString('hex') !== solutionClient.toString('hex')) {
+      wrappedStream.writePP({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
+
+      // close the stream, no need to wait
+      stream.sink([])
+      return
+    }
+
+    await wrappedStream.writePB({}, JoinVerify)
+  }
+
+  async _dial (targetB58, wrappedStream, stream) {
+    const targetPeer = this.network[targetB58]
+    if (!targetPeer) {
+      wrappedStream.writePB({ error: Error.E_TARGET_UNREACHABLE }, DialResponse)
+
+      // close the stream, no need to wait
+      stream.sink([])
+      return
+    }
+
+    // Open stream to target peer
+    const { stream: targetStream } = await targetPeer.connection.newStream('/p2p/stardust/0.1.0')
+
+    wrappedStream.writePB({}, DialResponse)
+
+    // Pipe streams of both peers
+    await pipe(
+      targetStream,
+      wrappedStream.unwrap(),
+      targetStream
+    )
   }
 
   /**
@@ -106,7 +167,7 @@ class Server {
       modules: {
         transport: [Transport],
         streamMuxer: [Muxer],
-        connEncryption: [Crypto]
+        connEncryption: [Secio]
       }
     })
 
@@ -116,47 +177,29 @@ class Server {
 
     await this.libp2p.start()
 
-    const handler = async ({ stream }) => {
-      const wrapped = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
+    const handler = async ({ connection, stream }) => {
+      const wrappedStream = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
+      const message = await wrappedStream.readLP()
 
       try {
-        log('performing challenge')
+        // Try register
+        const { random128: random, peerID } = JoinInit.decode(message.slice())
 
-        const { random128: random, peerID } = await wrapped.readPB(JoinInit)
-        const id = await PeerId.createFromJSON(peerID)
+        if (random && peerID) {
+          const id = await PeerId.createFromJSON(peerID)
 
-        if (!Buffer.isBuffer(random) || random.length !== 128) {
-          wrapped.writePP({ error: Error.E_RAND_LENGTH }, JoinVerify)
+          await this._register(random, id, wrappedStream, stream)
+          this.addToNetwork(connection, wrappedStream, id)
+        } else {
+          const { target } = DialRequest.decode(message.slice())
+          const targetB58 = new PeerId(target).toB58String()
 
-          // close the stream, no need to wait
-          stream.sink([])
-          return
+          log('dial from %s to %s', connection.localPeer.toB58String(), targetB58)
+          await this._dial(targetB58, wrappedStream, stream)
         }
-
-        log('got id, challenge for %s', id.toB58String())
-
-        const saltSecret = crypto.randomBytes(128)
-        const saltEncrypted = await id.pubKey.encrypt(saltSecret)
-
-        await wrapped.writePB({ saltEncrypted }, JoinChallenge)
-
-        const solution = sha5(random, saltSecret)
-        const { solution: solutionClient } = await wrapped.readPB(JoinChallengeSolution)
-
-        if (solution.toString('hex') !== solutionClient.toString('hex')) {
-          wrapped.writePP({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
-
-          // close the stream, no need to wait
-          stream.sink([])
-          return
-        }
-
-        await wrapped.writePB({}, JoinVerify)
-
-        this.addToNetwork(wrapped, id)
       } catch (error) {
         log(error)
-        wrapped.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
+        wrappedStream.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
 
         // close the stream, no need to wait
         stream.sink([])
@@ -164,14 +207,14 @@ class Server {
     }
 
     this.libp2p.handle('/p2p/stardust/0.1.0', handler)
-    // this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
+    this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
   }
 
   /**
    * Stop libp2p node and discovery.
    */
   async stop () {
-    // clearInterval(this.discoveryInterval)
+    clearInterval(this.discoveryInterval)
     if (this.libp2p) {
       await this.libp2p.stop()
     }

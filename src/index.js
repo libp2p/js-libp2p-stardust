@@ -11,7 +11,7 @@ const { AbortError } = require('abortable-iterator')
 // const mafmt = require('mafmt')
 
 const Listener = require('./listener')
-const toConnection = require('./socket-to-conn')
+const toConnection = require('./stream-to-conn')
 const { CODE_CIRCUIT } = require('./constants')
 
 function getServerForAddress (addr) {
@@ -65,8 +65,11 @@ class Stardust {
    * @returns {Connection} An upgraded Connection
    */
   async dial (ma, options = {}) {
-    const rawConn = await this._connect(ma, options)
-    const maConn = toConnection(rawConn, { remoteAddr: ma, signal: options.signal })
+    const stream = await this._connect(ma, options)
+    const maConn = toConnection({
+      stream,
+      remoteAddr: ma
+    }, options)
     log('new outbound connection %s', maConn.remoteAddr)
     const conn = await this._upgrader.upgradeOutbound(maConn)
     log('outbound connection %s upgraded', maConn.remoteAddr)
