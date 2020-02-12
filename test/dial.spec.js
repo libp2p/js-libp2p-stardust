@@ -44,17 +44,14 @@ describe('dial', () => {
     const ma = multiaddr(listeners[1].address.toString() + clients[1].addr.toString())
 
     const conn = await clients[0].dial(ma)
-    const data = Buffer.from('some data')
-
+    const data = 'hey'
     const values = await pipe(
       [data],
       conn,
       collect
     )
 
-    expect(values[0].slice()).to.eql(data)
-    // TODO
-    // expect(values).to.eql([data])
+    expect(values[0].slice()).to.eql(Buffer.from(data))
   })
 
   it('dial offline / non-exist()ent node on IPv4, check promise rejected', async function () {

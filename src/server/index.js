@@ -111,7 +111,7 @@ class Server {
     log('performing challenge')
 
     if (!Buffer.isBuffer(random) || random.length !== 128) {
-      wrappedStream.writePP({ error: Error.E_RAND_LENGTH }, JoinVerify)
+      wrappedStream.writePB({ error: Error.E_RAND_LENGTH }, JoinVerify)
 
       // close the stream, no need to wait
       stream.sink([])
@@ -129,7 +129,7 @@ class Server {
     const { solution: solutionClient } = await wrappedStream.readPB(JoinChallengeSolution)
 
     if (solution.toString('hex') !== solutionClient.toString('hex')) {
-      wrappedStream.writePP({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
+      wrappedStream.writePB({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
 
       // close the stream, no need to wait
       stream.sink([])
