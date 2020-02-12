@@ -9,6 +9,7 @@ const EventEmitter = require('events')
 const crypto = require('crypto')
 const PeerId = require('peer-id')
 const PeerInfo = require('peer-info')
+const toConnection = require('libp2p-utils/src/stream-to-ma-conn')
 
 const Wrap = require('it-pb-rpc')
 const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
@@ -127,8 +128,25 @@ class Listener extends EventEmitter {
     this.wrappedStream = wrapped
     this.serverConnection = conn
 
-    this.client.libp2p.handle('/p2p/stardust/0.1.0', ({ stream }) => {
-      this.handler(stream)
+    this.client.libp2p.handle('/p2p/stardust/0.1.0', async ({ stream, connection }) => {
+      const maConn = toConnection({
+        stream,
+        remoteAddr: connection.remoteAddr,
+        localAddr: connection.localAddr
+      })
+      log('new inbound connection %s', maConn.remoteAddr)
+
+      let conn
+      try {
+        conn = await this.upgrader.upgradeInbound(maConn)
+      } catch (err) {
+        log.error('inbound connection failed to upgrade', err)
+        return maConn.close()
+      }
+
+      log('inbound connection %s upgraded', maConn.remoteAddr)
+      this.handler && this.handler(conn)
+      this.emit('connection', conn)
     })
 
     this._onDiscovery()
