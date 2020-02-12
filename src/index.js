@@ -81,7 +81,7 @@ class Stardust {
    * @param {Multiaddr} ma
    * @param {object} options
    * @param {AbortSignal} options.signal Used to abort dial requests
-   * @returns {Promise<SimplePeer>} Resolves a SimplePeer Webrtc channel
+   * @returns {Promise<DuplexIterableStream>} Resolves a duplex iterable stream with the target peer
    */
   _connect (ma, options = {}) {
     if (options.signal && options.signal.aborted) {
@@ -134,7 +134,6 @@ class Stardust {
         return true
       }
 
-      // TODO
       // return mafmt.Stardust.matches(ma)
     })
   }

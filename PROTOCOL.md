@@ -50,13 +50,6 @@ The server verifies if the client is online and responds with either an error or
 After that the normal libp2p dialing flow is happening between A and B
 ```
 
-# Choices and explanations
-
-## Why not use libp2p's built-in switch instead of microswitch?
-
-- Complexity: Dynamic injection isn't a thing yet, and any other solution would be a complete mess
-- Performance: As stardust will mainly be used over wss:// there is no need to add another layer of SECIO on top of that (connections between peers are verified and protected by SECIO anyways)
-
 ## Crypto challenge
 
 - Using a signature challenge would make the client sign anything the server gives it

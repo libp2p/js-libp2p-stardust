@@ -22,6 +22,10 @@
 
 [Maciej Krüger](https://github.com/mkg20001)
 
+## Protocol
+
+You can read the protocol specification on [PROTOCOL.md](./PROTOCOL.md).
+
 ## Usage
 
 ### Install
