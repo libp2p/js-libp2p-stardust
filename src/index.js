@@ -11,7 +11,7 @@ const { AbortError } = require('abortable-iterator')
 // const mafmt = require('mafmt')
 
 const Listener = require('./listener')
-const toConnection = require('./stream-to-conn')
+const toConnection = require('libp2p-utils/src/stream-to-ma-conn')
 const { CODE_CIRCUIT } = require('./constants')
 
 function getServerForAddress (addr) {
