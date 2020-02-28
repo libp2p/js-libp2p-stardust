@@ -14,6 +14,8 @@ async function run () {
 
   await server.start()
 
+  server.libp2p.peerInfo.multiaddrs.forEach((ma) => console.log('listening on %s', ma.toString()))
+
   const stop = async () => {
     console.log('Stopping...')
     await server.stop()

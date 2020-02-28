@@ -1,20 +1,13 @@
 # js-libp2p-stardust
 
-[![](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](http://ipn.io)
-[![](https://img.shields.io/badge/project-IPFS-blue.svg?style=flat-square)](http://ipfs.io/)
+[![](https://img.shields.io/badge/made%20by-mkg20001-blue.svg?style=flat-square)](https://mkg20001.io)
+[![](https://img.shields.io/badge/project-libp2p-yellow.svg?style=flat-square)](http://libp2p.io/)
 [![](https://img.shields.io/badge/freenode-%23ipfs-blue.svg?style=flat-square)](http://webchat.freenode.net/?channels=%23ipfs)
 [![Discourse posts](https://img.shields.io/discourse/https/discuss.libp2p.io/posts.svg)](https://discuss.libp2p.io)
-[![Coverage Status](https://coveralls.io/repos/github/libp2p/js-libp2p-websockets/badge.svg?branch=master)](https://coveralls.io/github/libp2p/js-libp2p-websockets?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/libp2p/js-libp2p-stardust/badge.svg?branch=master)](https://coveralls.io/github/libp2p/js-libp2p-stardust?branch=master)
 [![Travis CI](https://travis-ci.org/libp2p/js-libp2p-stardust.svg?branch=master)](https://travis-ci.org/libp2p/js-libp2p-stardust)
-[![Circle CI](https://circleci.com/gh/libp2p/js-libp2p-stardust.svg?style=svg)](https://circleci.com/gh/libp2p/js-libp2p-stardust)
 [![Dependency Status](https://david-dm.org/libp2p/js-libp2p-stardust.svg?style=flat-square)](https://david-dm.org/libp2p/js-libp2p-stardust)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard)
-![](https://img.shields.io/badge/npm-%3E%3D3.0.0-orange.svg?style=flat-square)
-![](https://img.shields.io/badge/Node.js-%3E%3D4.0.0-orange.svg?style=flat-square)
-
-[![](https://raw.githubusercontent.com/libp2p/interface-transport/master/img/badge.png)](https://github.com/libp2p/interface-transport)
-[![](https://raw.githubusercontent.com/libp2p/interface-connection/master/img/badge.png)](https://github.com/libp2p/interface-connection)
-[![](https://github.com/libp2p/interface-peer-discovery/raw/master/img/badge.png)](https://github.com/libp2p/interface-peer-discovery)
 
 > `libp2p-stardust` is one of the multiple transports available for libp2p. `libp2p-stardust` incorporates both a transport and a discovery service that is facilitated by the stardust server, also available in this repo.
 

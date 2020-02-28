@@ -4,7 +4,7 @@ const debug = require('debug')
 const log = debug('libp2p:stardust:listener')
 log.error = debug('libp2p:stardust:listener:error')
 
-const EventEmitter = require('events')
+const { EventEmitter } = require('events')
 
 const crypto = require('crypto')
 const PeerId = require('peer-id')
@@ -13,7 +13,17 @@ const toConnection = require('libp2p-utils/src/stream-to-ma-conn')
 
 const Wrap = require('it-pb-rpc')
 const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
-const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, ErrorTranslations } = require('./proto')
+const {
+  JoinInit,
+  JoinChallenge,
+  JoinChallengeSolution,
+  JoinVerify,
+  Discovery,
+  DiscoveryAck,
+  DialRequest,
+  DialResponse,
+  ErrorTranslations
+} = require('./proto')
 
 const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
 
@@ -29,12 +39,13 @@ class Listener extends EventEmitter {
   /**
    * @constructor
    * @param {Object} properties - properties for the listener
-   * @param {function (Connection)} properties.handler - New connection handler
+   * @param {Stardust} properties.client - Stardust client reference
    * @param {Upgrader} properties.upgrader - Connection upgrader
-   * @param {Upgrader} properties.client - Stardust client reference
-   * @param {Object} properties.options - options for the listener
+   * @param {function (Connection)} [properties.handler] - New connection handler
+   * @param {Object} [properties.options] - options for the listener
+   * @param {number} [propertis.options.discoveryInterval=10000]
    */
-  constructor ({ handler, upgrader, client, options }) {
+  constructor ({ client, upgrader, handler, options = {} }) {
     super()
     this.client = client
     this.handler = handler
@@ -50,7 +61,7 @@ class Listener extends EventEmitter {
 
   /**
    * Listen on a multiaddr (from stardust server)
-   * @param {multiaddr} ma multiaddr to listen on
+   * @param {Multiaddr} ma multiaddr to listen on
    * @returns {Promise<void>}
    */
   async listen (ma) {
@@ -60,7 +71,6 @@ class Listener extends EventEmitter {
     } catch (err) {
       if (this.client.softFail) {
         // dials will fail, but that's just about it
-        this.emit('listening')
         return
       }
       this.emit('error', err)
@@ -69,7 +79,7 @@ class Listener extends EventEmitter {
 
   /**
    * Get listener addresses
-   * @returns {Array<multiaddr>}
+   * @returns {Array<Multiaddr>}
    */
   getAddrs () {
     return this.address ? [this.address] : []
@@ -81,13 +91,13 @@ class Listener extends EventEmitter {
   close () {
     if (!this.isConnected) return
     this.isConnected = false // will prevent new conns, but will keep current ones as interface requires it
-    delete this.client.connections[this.aid]
+    delete this.client.listeners[this.aid]
     this.emit('close')
   }
 
   /**
    * Connect to a stardust server.
-   * @param {multiaddr} addr address of the stardust server
+   * @param {Multiaddr} addr address of the stardust server
    */
   async connectServer (addr) {
     if (this.isConnected) return
@@ -124,7 +134,7 @@ class Listener extends EventEmitter {
     log('connected')
 
     this.isConnected = true
-    this.client.connections[String(this.aid)] = this
+    this.client.listeners[String(this.aid)] = this
     this.wrappedStream = wrapped
     this.serverConnection = conn
 
@@ -149,14 +159,14 @@ class Listener extends EventEmitter {
       this.emit('connection', conn)
     })
 
-    this._onDiscovery()
+    this._discoverPeers()
   }
 
   /**
    * Read discovery messages
    * @private
    */
-  async _onDiscovery () {
+  async _discoverPeers () {
     if (!this.isConnected) {
       return
     }
@@ -195,25 +205,28 @@ class Listener extends EventEmitter {
     }
 
     log('reading discovery')
-    message.ids
-      .map(id => {
+    for (const id of message.ids) {
+      try {
         const pi = new PeerInfo(new PeerId(id))
-        if (pi.id.toB58String() === this.client.id.toB58String()) return
-        pi.multiaddrs.add(baseAddr.encapsulate('/p2p-stardust/p2p/' + pi.id.toB58String()))
 
-        return pi
-      })
-      .filter(Boolean)
-      .forEach(pi => this.client.discovery.emit('peer', pi))
+        if (pi.id.toB58String() !== this.client.id.toB58String()) {
+          pi.multiaddrs.add(baseAddr.encapsulate('/p2p-stardust/p2p/' + pi.id.toB58String()))
 
-    setTimeout(() => this._onDiscovery(), 100) // cooldown
+          this.client.discovery.emit('peer', pi)
+        }
+      } catch (err) {
+        log.error('invalid peer discover', err)
+      }
+    }
+
+    setTimeout(() => this._discoverPeers(), this.options.discoveryInterval || 10000) // cooldown
   }
 
   async _dial (addr) {
     if (!this.isConnected) { throw new Error('Server not online!') }
 
     const id = addr.getPeerId()
-    const _id = PeerId.createFromB58String(id)._id
+    const _id = PeerId.createFromB58String(id).id
 
     log('dialing %s', id)
 

@@ -14,7 +14,17 @@ const delay = require('delay')
 const Wrap = require('it-pb-rpc')
 const pipe = require('it-pipe')
 const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
-const { JoinInit, JoinChallenge, JoinChallengeSolution, JoinVerify, Discovery, DiscoveryAck, DialRequest, DialResponse, Error } = require('../proto')
+const {
+  JoinInit,
+  JoinChallenge,
+  JoinChallengeSolution,
+  JoinVerify,
+  Discovery,
+  DiscoveryAck,
+  DialRequest,
+  DialResponse,
+  Error
+} = require('../proto')
 
 const multiaddr = require('multiaddr')
 const PeerId = require('peer-id')
@@ -93,7 +103,7 @@ class Server {
    */
   update () {
     log('updating cached data')
-    this.networkArray = Object.keys(this.network).map(b58 => this.network[b58])
+    this.networkArray = Object.values(this.network)
     this._cachedDiscovery = this.networkArray.length ? { ids: this.networkArray.map(client => client.id._id) } : { ids: [] }
   }
 

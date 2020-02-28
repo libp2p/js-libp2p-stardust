@@ -8,17 +8,16 @@ const assert = require('assert')
 const withIs = require('class-is')
 const { EventEmitter } = require('events')
 const { AbortError } = require('abortable-iterator')
-// const mafmt = require('mafmt')
+const errCode = require('err-code')
 
 const Listener = require('./listener')
 const toConnection = require('libp2p-utils/src/stream-to-ma-conn')
 const { CODE_CIRCUIT } = require('./constants')
+const { messages, codes } = require('./errors')
 
 function getServerForAddress (addr) {
   return String(addr.decapsulate('p2p-stardust'))
 }
-
-function noop () { }
 
 /**
 * Stardust Transport
@@ -29,21 +28,18 @@ class Stardust {
    * @constructor
    * @param {Object} options - Options for the listener
    * @param {Upgrader} options.upgrader
-   * @param {PeerId} options.id - Id for the crypto challenge
    * @param {Libp2p} options.libp2p - Libp2p instance.
-   * @param {Transport[]} options.transports - Transport(s) for microswitch
-   * @param {Muxer[]} options.muxers - Muxer(s) for microswitch
    * @param {boolean} options.softFail - Whether to softly fail on listen errors
    */
-  constructor ({ upgrader, libp2p = {}, id, softFail }) {
+  constructor ({ upgrader, libp2p = {}, softFail = false }) {
     assert(upgrader, 'An upgrader must be provided. See https://github.com/libp2p/interface-transport#upgrader.')
     this._upgrader = upgrader
 
     this.libp2p = libp2p
-    this.id = id
+    this.id = libp2p.peerInfo.id
     this.softFail = softFail
 
-    this.connections = {}
+    this.listeners = {}
 
     // Discovery
     this.discovery = new EventEmitter()
@@ -88,7 +84,11 @@ class Stardust {
       throw new AbortError()
     }
 
-    const server = this.connections[getServerForAddress(ma)]
+    const server = this.listeners[getServerForAddress(ma)]
+
+    if (!server) {
+      throw errCode(new Error(messages.NO_LISTENING_SERVER), codes.NO_LISTENING_SERVER)
+    }
 
     return server._dial(ma, options)
   }
@@ -98,6 +98,7 @@ class Stardust {
    * anytime a new incoming Connection has been successfully upgraded via
    * `upgrader.upgradeInbound`.
    * @param {object} [options]
+   * @param {number} [options.discoveryInterval]
    * @param {function (Connection)} handler
    * @returns {Listener} A stardust listener
    */
@@ -106,8 +107,6 @@ class Stardust {
       handler = options
       options = {}
     }
-
-    handler = handler || noop
 
     return new Listener({
       handler,
@@ -134,7 +133,7 @@ class Stardust {
         return true
       }
 
-      // return mafmt.Stardust.matches(ma)
+      return false
     })
   }
 }
