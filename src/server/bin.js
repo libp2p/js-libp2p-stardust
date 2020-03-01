@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 'use strict'
 
 // Usage: $0 [<address> <address 2>...]
