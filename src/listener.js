@@ -87,11 +87,23 @@ class Listener extends EventEmitter {
 
   /**
    * Close listener
+   * @returns {Promise<void>}
    */
-  close () {
+  async close () {
     if (!this.isConnected) return
     this.isConnected = false // will prevent new conns, but will keep current ones as interface requires it
+
+    // close stream and connection with the server
+    const wrappedStream = this.wrappedStream.unwrap()
+    wrappedStream.sink([])
+
+    await this.serverConnection.close()
+
+    // reset state
     delete this.client.listeners[this.aid]
+    this._timeoutId && clearTimeout(this._timeoutId)
+    this.address = undefined
+    this.wrappedStream = undefined
     this.emit('close')
   }
 
@@ -108,6 +120,7 @@ class Listener extends EventEmitter {
 
     const conn = await this.client.libp2p.dial(this.aid.encapsulate(`/p2p/${addr.getPeerId()}`))
     const { stream } = await conn.newStream('/p2p/stardust/0.1.0')
+
     const wrapped = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
 
     log('performing challenge')
@@ -180,6 +193,11 @@ class Listener extends EventEmitter {
       // Proof still connected
       this.wrappedStream.writePB({}, DiscoveryAck)
     } catch (err) {
+      // listener was already closed
+      if (!this.isConnected) {
+        return
+      }
+
       log('failed to read discovery: %s', err.stack)
       log('assume disconnected!')
 
@@ -215,11 +233,11 @@ class Listener extends EventEmitter {
           this.client.discovery.emit('peer', pi)
         }
       } catch (err) {
-        log.error('invalid peer discover', err)
+        log.error('invalid peer discovered', err)
       }
     }
 
-    setTimeout(() => this._discoverPeers(), this.options.discoveryInterval || 10000) // cooldown
+    this._timeoutId = setTimeout(() => this._discoverPeers(), this.options.discoveryInterval || 10000) // cooldown
   }
 
   async _dial (addr) {

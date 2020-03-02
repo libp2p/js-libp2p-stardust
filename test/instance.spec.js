@@ -20,7 +20,7 @@ describe('instance', () => {
   })
 
   it('should be creatable', () => {
-    client = new Stardust({ upgrader: mockUpgrader, id: libp2p.peerInfo.id, libp2p })
+    client = new Stardust({ upgrader: mockUpgrader, libp2p })
     conn = client.createListener(() => {})
   })
 

@@ -42,6 +42,8 @@ const checkAckLoop = async (wrappedStream, onEnd) => {
   }
 }
 
+const protocol = '/p2p/stardust/0.1.0'
+
 /**
 * Stardust Transport Server
 * @class
@@ -221,7 +223,7 @@ class Server {
       }
     }
 
-    this.libp2p.handle('/p2p/stardust/0.1.0', handler)
+    this.libp2p.handle(protocol, handler)
     this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
   }
 
@@ -230,6 +232,7 @@ class Server {
    */
   async stop () {
     clearInterval(this.discoveryInterval)
+    this.libp2p.unhandle(protocol)
     if (this.libp2p) {
       await this.libp2p.stop()
     }

@@ -28,7 +28,7 @@ describe('dial', () => {
       number: 2
     })
 
-    clients = peers.map((libp2p) => new Stardust({ upgrader: mockUpgrader, id: libp2p.peerInfo.id, libp2p }))
+    clients = peers.map((libp2p) => new Stardust({ upgrader: mockUpgrader, libp2p }))
     listeners = clients.map(client => client.createListener(stream => pipe(stream, stream)))
 
     // start discovery

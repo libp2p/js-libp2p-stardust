@@ -20,7 +20,7 @@ describe('listen', () => {
 
   beforeEach(async () => {
     const [libp2p] = await createPeer()
-    stardust = new Stardust({ upgrader: mockUpgrader, id: libp2p.peerInfo.id, libp2p })
+    stardust = new Stardust({ upgrader: mockUpgrader, libp2p })
   })
 
   it('listen, check for promise', async () => {
