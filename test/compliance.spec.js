@@ -8,6 +8,7 @@ const multiaddr = require('multiaddr')
 const Stardust = require('../src')
 const { createPeer } = require('./utils')
 
+// Skipped due to https://github.com/libp2p/js-libp2p-stardust/issues/21
 describe.skip('interface-transport compliance', () => {
   testsTransport({
     async setup ({ upgrader }) {

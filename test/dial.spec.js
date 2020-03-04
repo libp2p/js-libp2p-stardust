@@ -38,7 +38,7 @@ describe('dial', () => {
     clients.forEach(c => (c.addr = multiaddr('/p2p/' + c.id.toB58String())))
   })
 
-  it('dial on IPv4, check promise', async function () {
+  it('dial on IPv4 should return a valid connection', async function () {
     this.timeout(20 * 1000)
 
     const ma = multiaddr(listeners[1].address.toString() + clients[1].addr.toString())
@@ -54,7 +54,7 @@ describe('dial', () => {
     expect(values[0].slice()).to.eql(Buffer.from(data))
   })
 
-  it('dial offline / non-exist()ent node on IPv4, check promise rejected', async function () {
+  it('dialing a nonexistent peer should fail (IPv4)', async function () {
     this.timeout(20 * 1000)
     const maOffline = multiaddr('/ip4/127.0.0.1/tcp/15555/ws/p2p-stardust/p2p/QmcgpsyWgH8Y8ajJz1Cu72KnS5uo2Aa2LpzU7kinSooo2f')
 

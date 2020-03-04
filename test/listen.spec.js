@@ -23,7 +23,7 @@ describe('listen', () => {
     stardust = new Stardust({ upgrader: mockUpgrader, libp2p })
   })
 
-  it('listen, check for promise', async () => {
+  it('should be able to listen on a valid server', async () => {
     const listener = stardust.createListener((conn) => { })
     await listener.listen(SERVER_URL)
     await listener.close()

@@ -51,7 +51,7 @@ describe('discovery', () => {
       await deferred.promise
     })
 
-    it('should close connection with server on closing listener after discovery trigger', async function () {
+    it('closing the listener should close the underlying connection to the stardust server with open discovery streams', async function () {
       this.timeout(15e3)
 
       const deferred = pDefer()

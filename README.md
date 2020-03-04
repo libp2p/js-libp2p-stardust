@@ -5,7 +5,7 @@
 [![](https://img.shields.io/badge/freenode-%23ipfs-blue.svg?style=flat-square)](http://webchat.freenode.net/?channels=%23ipfs)
 [![Discourse posts](https://img.shields.io/discourse/https/discuss.libp2p.io/posts.svg)](https://discuss.libp2p.io)
 [![Coverage Status](https://coveralls.io/repos/github/libp2p/js-libp2p-stardust/badge.svg?branch=master)](https://coveralls.io/github/libp2p/js-libp2p-stardust?branch=master)
-[![Travis CI](https://travis-ci.org/libp2p/js-libp2p-stardust.svg?branch=master)](https://travis-ci.org/libp2p/js-libp2p-stardust)
+[![Travis CI](https://travis-ci.com/libp2p/js-libp2p-stardust.svg?branch=master)](https://travis-ci.com/libp2p/js-libp2p-stardust)
 [![Dependency Status](https://david-dm.org/libp2p/js-libp2p-stardust.svg?style=flat-square)](https://david-dm.org/libp2p/js-libp2p-stardust)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard)
 
