@@ -2,6 +2,7 @@
   "name": "libp2p-stardust",
   "version": "0.1.2",
   "description": "Basically ws-star but without the bugs",
+  "leadMaintainer": "Maciej Krüger <mkg20001@gmail.com>",
   "main": "src/index.js",
   "bin": {
     "stardust-server": "src/server/bin.js"
@@ -28,7 +29,6 @@
     "rendezvous",
     "relay"
   ],
-  "author": "Maciej Krüger <mkg20001@gmail.com>",
   "license": "MPL-2.0",
   "dependencies": {
     "abortable-iterator": "^3.0.0",
