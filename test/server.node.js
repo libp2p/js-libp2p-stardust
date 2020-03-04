@@ -7,6 +7,8 @@ const dirtyChai = require('dirty-chai')
 const expect = chai.expect
 chai.use(dirtyChai)
 const sinon = require('sinon')
+
+const delay = require('delay')
 const pWaitFor = require('p-wait-for')
 
 const PeerId = require('peer-id')
@@ -39,11 +41,11 @@ describe('server', () => {
   })
 
   afterEach(async () => {
-    sinon.reset()
+    sinon.restore()
     server && await server.stop()
   })
 
-  it('server should untrack the peer if no ack received', async () => {
+  it('server should untrack the peer if no ack received after disconnect', async () => {
     const [libp2p] = await createPeer()
     const client = new Stardust({ upgrader: mockUpgrader, libp2p })
     const listener = client.createListener(stream => pipe(stream, stream))
@@ -75,5 +77,52 @@ describe('server', () => {
     // Wait for removal from network
     await pWaitFor(() => spyRemoveFromNetwork.called)
     expect(Object.keys(server.network).length).to.eql(0)
+  })
+
+  it('server should untrack the peer if no ack received after client fail to ack', async () => {
+    const [libp2p] = await createPeer()
+    const client = new Stardust({ upgrader: mockUpgrader, libp2p })
+    const listener = client.createListener(stream => pipe(stream, stream))
+
+    // start discovery
+    client.discovery.start()
+
+    const spyRegister = sinon.spy(server, '_register')
+    const spyAddToNetwork = sinon.spy(server, 'addToNetwork')
+    const spyRemoveFromNetwork = sinon.spy(server, 'removeFromNetwork')
+
+    expect(Object.keys(server.network).length).to.eql(0)
+    await listener.listen(SERVER_URL)
+
+    // client and server are connected
+    expect(listener.wrappedStream).to.exist()
+    expect(listener.serverConnection).to.exist()
+    expect(listener.serverConnection.stat.status).to.eql('open')
+    expect(Object.keys(server.network).length).to.eql(1)
+
+    // Register messages received
+    expect(spyRegister.called).to.eql(true)
+    expect(spyAddToNetwork.called).to.eql(true)
+    expect(spyRemoveFromNetwork.called).to.eql(false)
+
+    // Trigger a disconnect from the client after error
+    listener.wrappedStream.writePB = () => { throw new Error() }
+
+    // Add a delay to reconnect
+    // so that server has a clean network for the test
+    const cpFn = listener.listen
+    listener.listen = async (ma) => {
+      await delay(1000)
+      return cpFn(ma)
+    }
+
+    // Wait for removal from network
+    await Promise.all([
+      pWaitFor(() => spyRemoveFromNetwork.called),
+      pWaitFor(() => Object.keys(server.network).length === 0)
+    ])
+
+    // Trigger a disconnect from the client
+    await listener.close()
   })
 })

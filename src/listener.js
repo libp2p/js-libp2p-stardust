@@ -203,7 +203,8 @@ class Listener extends EventEmitter {
 
       this.isConnected = false
       this.serverConnection = null
-      this.wrappedStream = null
+      const wrappedStream = this.wrappedStream.unwrap()
+      wrappedStream.sink([])
 
       log('reconnecting')
 

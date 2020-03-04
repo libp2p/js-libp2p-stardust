@@ -2,6 +2,11 @@
 
 /* eslint-env mocha */
 
+const chai = require('chai')
+const dirtyChai = require('dirty-chai')
+const expect = chai.expect
+chai.use(dirtyChai)
+
 const Stardust = require('../src')
 
 const { createPeer, SERVER_URL } = require('./utils')
@@ -11,20 +16,23 @@ const mockUpgrader = {
 }
 
 describe('instance', () => {
-  let client
-  let conn
   let libp2p
 
   before(async () => {
     [libp2p] = await createPeer()
   })
 
-  it('should be creatable', () => {
-    client = new Stardust({ upgrader: mockUpgrader, libp2p })
-    conn = client.createListener(() => {})
+  it('should be creatable and able to connect', async () => {
+    const client = new Stardust({ upgrader: mockUpgrader, libp2p })
+    const conn = client.createListener(() => {})
+    await conn.listen(SERVER_URL)
   })
 
-  it('should connect to server', async () => {
-    await conn.listen(SERVER_URL)
+  it('throws creating without upgrader', () => {
+    expect(() => new Stardust().to.throw())
+  })
+
+  it('throws creating without libp2p', () => {
+    expect(() => new Stardust({ upgrader: mockUpgrader }).to.throw())
   })
 })

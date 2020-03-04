@@ -12,7 +12,10 @@ async function pre () {
   const peerId = await PeerId.createFromJSON(IDJSON)
   const peerInfo = await PeerInfo.create(peerId)
 
-  server = new Server({ peerInfo })
+  server = new Server({
+    discoveryInterval: 2e3,
+    peerInfo
+  })
   await server.start()
 }
 

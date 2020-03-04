@@ -52,17 +52,19 @@ class Server {
   /**
    * @constructor
    * @param {Object} options - Options for the listener
-   * @param {Array<multiaddr>} options.addresses
-   * @param {Array<Transport>} options.transports
-   * @param {Array<Multiplexer>} options.muxers
-   * @param {Array<Encryption>} options.encryption
-   * @param {PeerInfo} options.peerInfo
+   * @param {Array<multiaddr>} [options.addresses]
+   * @param {Array<Transport>} [options.transports]
+   * @param {Array<Multiplexer>} [options.muxers]
+   * @param {Array<Encryption>} [options.encryption]
+   * @param {number} [options.discoveryInterval]
+   * @param {PeerInfo} [options.peerInfo]
    */
   constructor ({
     addresses = [multiaddr('/ip6/::/tcp/5892/ws')],
     transports = [Transport],
     muxers = [Muxer],
     encryption = [Secio],
+    discoveryInterval = 10 * 1000,
     peerInfo
   } = {}) {
     this.peerAddr = addresses
@@ -75,6 +77,7 @@ class Server {
     this._muxers = muxers
     this._encryption = encryption
     this._peerInfo = peerInfo
+    this.discoveryIntervalTimeout = discoveryInterval
   }
 
   removeFromNetwork (client) {
@@ -224,7 +227,7 @@ class Server {
     }
 
     this.libp2p.handle(protocol, handler)
-    this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), 10 * 1000)
+    this.discoveryInterval = setInterval(this.broadcastDiscovery.bind(this), this.discoveryIntervalTimeout)
   }
 
   /**

@@ -4,7 +4,6 @@ const debug = require('debug')
 const log = debug('libp2p:stardust')
 log.error = debug('libp2p:stardust:error')
 
-const assert = require('assert')
 const withIs = require('class-is')
 const { EventEmitter } = require('events')
 const { AbortError } = require('abortable-iterator')
@@ -31,8 +30,14 @@ class Stardust {
    * @param {Libp2p} options.libp2p - Libp2p instance.
    * @param {boolean} options.softFail - Whether to softly fail on listen errors
    */
-  constructor ({ upgrader, libp2p = {}, softFail = false }) {
-    assert(upgrader, 'An upgrader must be provided. See https://github.com/libp2p/interface-transport#upgrader.')
+  constructor ({ upgrader, libp2p, softFail = false }) {
+    if (!upgrader) {
+      throw new Error('An upgrader must be provided. See https://github.com/libp2p/interface-transport#upgrader.')
+    } else if (!libp2p) {
+      // TODO: this should not be a requirement in the future
+      throw new Error('A libp2p instance must be provided')
+    }
+
     this._upgrader = upgrader
 
     this.libp2p = libp2p

@@ -12,6 +12,7 @@ const multiaddr = require('multiaddr')
 const Stardust = require('../src')
 const pipe = require('it-pipe')
 const pDefer = require('p-defer')
+const pWaitFor = require('p-wait-for')
 
 const { createPeer, SERVER_URL } = require('./utils')
 const mockUpgrader = {
@@ -33,11 +34,11 @@ describe('discovery', () => {
       clients.forEach((client) => client.discovery.start())
     })
 
-    it('listen on the second, discover the first', async function () {
-      this.timeout(15e3)
-
+    it('listen on the second, discover the first', async () => {
       const deferred = pDefer()
-      const listeners = clients.map(client => client.createListener(conn => pipe(conn, conn)))
+      const listeners = clients.map(client => client.createListener({
+        discoveryInterval: 1000
+      }, conn => pipe(conn, conn)))
       await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
 
       const maListener = multiaddr(SERVER_URL.decapsulate('/p2p/').toString() + '/p2p/' + clients[1].id.toB58String())
@@ -51,11 +52,11 @@ describe('discovery', () => {
       await deferred.promise
     })
 
-    it('closing the listener should close the underlying connection to the stardust server with open discovery streams', async function () {
-      this.timeout(15e3)
-
+    it('closing the listener should close the underlying connection to the stardust server with open discovery streams', async () => {
       const deferred = pDefer()
-      const listeners = clients.map(client => client.createListener(conn => pipe(conn, conn)))
+      const listeners = clients.map(client => client.createListener({
+        discoveryInterval: 1000
+      }, conn => pipe(conn, conn)))
       await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
 
       const maListener = multiaddr(SERVER_URL.decapsulate('/p2p/').toString() + '/p2p/' + clients[1].id.toB58String())
@@ -107,22 +108,18 @@ describe('discovery', () => {
     })
 
     it('discovers all the nodes registered in the server', async function () {
-      this.timeout(20e3)
-
-      const deferred = pDefer()
-      const listeners = clients.map(client => client.createListener(conn => pipe(conn, conn)))
+      this.timeout(15e3)
+      const listeners = clients.map(client => client.createListener({
+        discoveryInterval: 1000
+      }, conn => pipe(conn, conn)))
       await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
 
-      let discovered = 0
-      clients[3].discovery.on('peer', async () => {
-        discovered++
-        if (discovered === 3) {
-          await Promise.all(listeners.map(listener => listener.close()))
-          deferred.resolve()
-        }
-      })
+      // await deferred.promise
+      const discovered = []
+      clients[3].discovery.on('peer', (peer) => discovered.push(peer))
 
-      await deferred.promise
+      await pWaitFor(() => discovered.length === 3)
+      await Promise.all(listeners.map(listener => listener.close()))
     })
   })
 })
