@@ -108,17 +108,15 @@ describe('discovery', () => {
     })
 
     it('discovers all the nodes registered in the server', async function () {
-      this.timeout(15e3)
+      const discovered = []
+      clients[2].discovery.on('peer', (peer) => discovered.push(peer))
+
       const listeners = clients.map(client => client.createListener({
         discoveryInterval: 1000
       }, conn => pipe(conn, conn)))
       await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
 
-      // await deferred.promise
-      const discovered = []
-      clients[3].discovery.on('peer', (peer) => discovered.push(peer))
-
-      await pWaitFor(() => discovered.length === 3)
+      await pWaitFor(() => discovered.length >= 3)
       await Promise.all(listeners.map(listener => listener.close()))
     })
   })

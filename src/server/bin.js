@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict'
 
 // Usage: $0 [<address> <address 2>...]
@@ -14,7 +16,9 @@ async function run () {
 
   await server.start()
 
-  server.libp2p.peerInfo.multiaddrs.forEach((ma) => console.log('listening on %s', ma.toString()))
+  console.log('server peerID: ', server.libp2p.peerInfo.id.toB58String())
+
+  server.peerAddr.forEach((ma) => console.log('listening on %s', ma.toString()))
 
   const stop = async () => {
     console.log('Stopping...')
