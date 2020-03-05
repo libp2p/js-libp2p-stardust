@@ -37,7 +37,7 @@ const { collect } = require('streaming-iterables')
 
 const addr = multiaddr('/ip4/188.166.203.82/tcp/5892/ws/p2p-stardust')
 
-const stardust = new Stardust({ upgrader })
+const stardust = new Stardust({ upgrader, libp2p })
 
 const listener = stardust.createListener((socket) => {
   console.log('new connection opened')
@@ -56,7 +56,8 @@ const values = await pipe(
   collect
 )
 
-console.log(`Value: ${values.toString()}`)
+console.log(`Value: ${values[0].toString()}`)
+// > hello
 
 // Close connection after reading
 await listener.close()

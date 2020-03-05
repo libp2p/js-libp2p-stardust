@@ -143,7 +143,7 @@ class Server {
     const solution = sha5(random, saltSecret)
     const { solution: solutionClient } = await wrappedStream.readPB(JoinChallengeSolution)
 
-    if (solution.toString('hex') !== solutionClient.toString('hex')) {
+    if (solution.compare(solutionClient) !== 0) {
       wrappedStream.writePB({ error: Error.E_INCORRECT_SOLUTION }, JoinVerify)
 
       // close the stream, no need to wait
