@@ -103,7 +103,6 @@ class Stardust {
    * anytime a new incoming Connection has been successfully upgraded via
    * `upgrader.upgradeInbound`.
    * @param {object} [options]
-   * @param {number} [options.discoveryInterval]
    * @param {function (Connection)} handler
    * @returns {Listener} A stardust listener
    */

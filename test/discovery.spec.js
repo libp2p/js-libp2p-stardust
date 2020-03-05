@@ -36,9 +36,7 @@ describe('discovery', () => {
 
     it('listen on the second, discover the first', async () => {
       const deferred = pDefer()
-      const listeners = clients.map(client => client.createListener({
-        discoveryInterval: 1000
-      }, conn => pipe(conn, conn)))
+      const listeners = clients.map(client => client.createListener(conn => pipe(conn, conn)))
       await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
 
       const maListener = multiaddr(SERVER_URL.decapsulate('/p2p/').toString() + '/p2p/' + clients[1].id.toB58String())

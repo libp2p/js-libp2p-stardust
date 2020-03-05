@@ -43,7 +43,6 @@ class Listener extends EventEmitter {
    * @param {Upgrader} properties.upgrader - Connection upgrader
    * @param {function (Connection)} [properties.handler] - New connection handler
    * @param {Object} [properties.options] - options for the listener
-   * @param {number} [propertis.options.discoveryInterval=10000]
    */
   constructor ({ client, upgrader, handler, options = {} }) {
     super()
@@ -235,7 +234,7 @@ class Listener extends EventEmitter {
       }
     }
 
-    this._timeoutId = setTimeout(() => this._discoverPeers(), this.options.discoveryInterval || 10000) // cooldown
+    this._discoverPeers()
   }
 
   async _dial (addr) {
