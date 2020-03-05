@@ -94,9 +94,6 @@ class Listener extends EventEmitter {
     this.isConnected = false // will prevent new conns, but will keep current ones as interface requires it
 
     // close stream and connection with the server
-    const wrappedStream = this.wrappedStream.unwrap()
-    wrappedStream.sink([])
-
     await this.serverConnection.close()
 
     // reset state
