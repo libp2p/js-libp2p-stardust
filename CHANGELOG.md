@@ -1,3 +1,13 @@
+<a name="0.2.0-rc.0"></a>
+# [0.2.0-rc.0](https://github.com/libp2p/js-libp2p-stardust/compare/v0.1.2...v0.2.0-rc.0) (2020-03-06)
+
+
+### Bug Fixes
+
+* use correct listen addr ([71e13b7](https://github.com/libp2p/js-libp2p-stardust/commit/71e13b7))
+
+
+
 <a name="0.1.2"></a>
 ## [0.1.2](https://github.com/libp2p/js-libp2p-stardust/compare/v0.1.1...v0.1.2) (2019-10-27)
 
