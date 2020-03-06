@@ -14,7 +14,7 @@ const pipe = require('it-pipe')
 const pDefer = require('p-defer')
 const pWaitFor = require('p-wait-for')
 
-const { createPeer, SERVER_URL } = require('./utils')
+const { createPeer, SERVER_URL, getStardustMultiaddr } = require('./utils')
 const mockUpgrader = {
   upgradeInbound: maConn => maConn,
   upgradeOutbound: maConn => maConn
@@ -37,7 +37,7 @@ describe('discovery', () => {
     it('listen on the second, discover the first', async () => {
       const deferred = pDefer()
       const listeners = clients.map(client => client.createListener(conn => pipe(conn, conn)))
-      await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
+      await Promise.all(listeners.map(listener => listener.listen(getStardustMultiaddr(listener.client.id.toB58String()))))
 
       const maListener = multiaddr(SERVER_URL.decapsulate('/p2p/').toString() + '/p2p/' + clients[1].id.toB58String())
 
@@ -55,7 +55,7 @@ describe('discovery', () => {
       const listeners = clients.map(client => client.createListener({
         discoveryInterval: 1000
       }, conn => pipe(conn, conn)))
-      await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
+      await Promise.all(listeners.map(listener => listener.listen(getStardustMultiaddr(listener.client.id.toB58String()))))
 
       const maListener = multiaddr(SERVER_URL.decapsulate('/p2p/').toString() + '/p2p/' + clients[1].id.toB58String())
 
@@ -76,7 +76,7 @@ describe('discovery', () => {
 
     it('should close connection with server on closing listener', async () => {
       const listeners = clients.map(client => client.createListener(conn => pipe(conn, conn)))
-      await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
+      await Promise.all(listeners.map(listener => listener.listen(getStardustMultiaddr(listener.client.id.toB58String()))))
 
       listeners.forEach((listener) => {
         expect(listener.wrappedStream).to.exist()
@@ -114,7 +114,7 @@ describe('discovery', () => {
       const listeners = clients.map(client => client.createListener({
         discoveryInterval: 1000
       }, conn => pipe(conn, conn)))
-      await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
+      await Promise.all(listeners.map(listener => listener.listen(getStardustMultiaddr(listener.client.id.toB58String()))))
 
       await pWaitFor(() => Object.keys(discovered).length === 3)
 

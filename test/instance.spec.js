@@ -9,7 +9,7 @@ chai.use(dirtyChai)
 
 const Stardust = require('../src')
 
-const { createPeer, SERVER_URL } = require('./utils')
+const { createPeer, getStardustMultiaddr } = require('./utils')
 const mockUpgrader = {
   upgradeInbound: maConn => maConn,
   upgradeOutbound: maConn => maConn
@@ -25,7 +25,7 @@ describe('instance', () => {
   it('should be creatable and able to connect', async () => {
     const client = new Stardust({ upgrader: mockUpgrader, libp2p })
     const conn = client.createListener(() => {})
-    await conn.listen(SERVER_URL)
+    await conn.listen(getStardustMultiaddr(conn.client.id.toB58String()))
   })
 
   it('throws creating without upgrader', () => {

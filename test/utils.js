@@ -73,7 +73,14 @@ function createPeerId ({ number = 1, fixture = true } = {}) {
   )
 }
 
+const serverAddr = '/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust/p2p/QmY7t45zkBxzw5rtWQp3oAjzoJGTjh49f7LNz4YPBtTpqy'
+
+function getStardustMultiaddr (peerIdStr) {
+  return multiaddr(`${serverAddr}/p2p/${peerIdStr}`)
+}
+
 module.exports.createPeer = createPeer
 module.exports.createPeerInfo = createPeerInfo
 module.exports.createPeerId = createPeerId
-module.exports.SERVER_URL = multiaddr('/ip4/127.0.0.1/tcp/5892/ws/p2p-stardust/p2p/QmY7t45zkBxzw5rtWQp3oAjzoJGTjh49f7LNz4YPBtTpqy')
+module.exports.getStardustMultiaddr = getStardustMultiaddr
+module.exports.SERVER_URL = multiaddr(serverAddr)

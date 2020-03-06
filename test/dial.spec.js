@@ -13,7 +13,7 @@ const { collect } = require('streaming-iterables')
 const multiaddr = require('multiaddr')
 const Stardust = require('../src')
 
-const { createPeer, SERVER_URL } = require('./utils')
+const { createPeer, getStardustMultiaddr } = require('./utils')
 const mockUpgrader = {
   upgradeInbound: maConn => maConn,
   upgradeOutbound: maConn => maConn
@@ -33,15 +33,13 @@ describe('dial', () => {
 
     // start discovery
     clients.forEach((client) => client.discovery.start())
-
-    await Promise.all(listeners.map(listener => listener.listen(SERVER_URL)))
-    clients.forEach(c => (c.addr = multiaddr('/p2p/' + c.id.toB58String())))
+    await Promise.all(listeners.map(listener => listener.listen(getStardustMultiaddr(listener.client.id.toB58String()))))
   })
 
   it('dial on IPv4 should return a valid connection', async function () {
     this.timeout(20 * 1000)
 
-    const ma = multiaddr(listeners[1].address.toString() + clients[1].addr.toString())
+    const ma = multiaddr(listeners[1].address.toString())
 
     const conn = await clients[0].dial(ma)
     const data = 'hey'

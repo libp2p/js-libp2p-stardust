@@ -25,7 +25,7 @@ const {
   ErrorTranslations
 } = require('./proto')
 
-const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
+const { getStardustMultiaddr, sha5 } = require('./utils')
 
 function translateAndThrow (eCode) {
   throw new Error(ErrorTranslations[eCode] || ('Unknown error #' + eCode + '! Please upgrade libp2p-stardust to the latest version!'))
@@ -114,7 +114,7 @@ class Listener extends EventEmitter {
     this.address = addr
     this.aid = addr.decapsulate('p2p-stardust')
 
-    const conn = await this.client.libp2p.dial(this.aid.encapsulate(`/p2p/${addr.getPeerId()}`))
+    const conn = await this.client.libp2p.dial(this.aid.encapsulate(`/p2p/${getStardustMultiaddr(addr)}`))
     const { stream } = await conn.newStream('/p2p/stardust/0.1.0')
 
     const wrapped = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
