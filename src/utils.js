@@ -11,7 +11,7 @@ module.exports.getStardustMultiaddr = (ma) => {
     }
   })
 
-  // Get firs id
+  // Get first id
   return tuples[0][1]
 }
 
