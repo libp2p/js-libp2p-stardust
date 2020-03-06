@@ -3,7 +3,6 @@
 const protons = require('protons')
 
 module.exports = protons(`
-
 enum Error {
   OK                   = 0;
   E_RAND_LENGTH        = 100; // random128 has mismatching length
