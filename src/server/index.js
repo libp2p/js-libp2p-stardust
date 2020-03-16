@@ -133,7 +133,7 @@ class Server {
     this.networkArray = Object.values(this.network)
     this._cachedDiscovery = this.networkArray.length ? { ids: this.networkArray.map(client => client.id._id) } : { ids: [] }
     // Refresh metrics
-    this.metrics.peerMetric.set(this.network.length)
+    this.metrics.peerMetric.set(this.networkArray.length)
   }
 
   /**
@@ -206,6 +206,8 @@ class Server {
    * Add a libp2p handler for stardust protocol.
    */
   async start () {
+    this.metrics.peerMetric.set(this.networkArray.length)
+
     this.libp2p = await Libp2p.create({
       peerInfo: this._peerInfo,
       modules: {
