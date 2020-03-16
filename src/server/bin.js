@@ -2,7 +2,7 @@
 
 'use strict'
 
-// Usage: $0 [-p <port>] [--disableMetrics]
+// Usage: $0 [-libp2pPort <port>] [-metricsPort <port>] [--disableMetrics]
 
 /* eslint-disable no-console */
 
@@ -16,8 +16,9 @@ const argv = require('minimist')(process.argv.slice(2))
 
 async function run () {
   const metrics = !(argv.disableMetrics || process.env.DISABLE_METRICS)
-  const port = argv.port || argv.p || process.env.PORT || 5892
-  const addresses = [multiaddr(`/ip6/::/tcp/${port}/ws`)]
+  const metricsPort = argv.metricsPort || argv.mp || process.env.PORT || 8003
+  const libp2pPort = argv.libp2pPort || argv.lp || process.env.PORT || 5892
+  const addresses = [multiaddr(`/ip6/::/tcp/${libp2pPort}/ws`)]
 
   let metricsServer
 
@@ -39,8 +40,8 @@ async function run () {
 
     menoetius.instrument(metricsServer)
 
-    metricsServer.listen(8003, '127.0.0.1', () => {
-      console.log('metrics server listening on 8003')
+    metricsServer.listen(metricsPort, '127.0.0.1', () => {
+      console.log(`metrics server listening on ${metricsPort}`)
     })
   }
 
