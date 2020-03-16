@@ -49,6 +49,7 @@
     "multiaddr": "^7.2.1",
     "peer-id": "~0.13.6",
     "peer-info": "~0.17.1",
+    "prom-client": "^12.0.0",
     "protons": "^1.0.1"
   },
   "devDependencies": {
