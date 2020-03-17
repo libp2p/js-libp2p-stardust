@@ -6,6 +6,9 @@
 
 /* eslint-disable no-console */
 
+const debug = require('debug')
+const log = debug('libp2p:stardust:server:bin')
+
 const http = require('http')
 const menoetius = require('menoetius')
 
@@ -38,7 +41,7 @@ async function run () {
   server.peerAddr.forEach((ma) => console.log('listening on %s', ma.toString()))
 
   if (metrics) {
-    console.log('enabling metrics')
+    log('enabling metrics')
     metricsServer = http.createServer((req, res) => {
       if (req.url !== '/metrics') {
         res.statusCode = 200
