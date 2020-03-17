@@ -2,7 +2,7 @@
 
 'use strict'
 
-// Usage: $0 [--libp2pMultiaddr <multiaddr> ... <multiaddr>] [--metricsPort <port>] [--disableMetrics]
+// Usage: $0 [--libp2pMultiaddr <ma> ... <ma>] [--metricsMultiaddr <ma>] [--disableMetrics]
 
 /* eslint-disable no-console */
 
@@ -19,7 +19,8 @@ const argv = require('minimist')(process.argv.slice(2))
 
 async function run () {
   const metrics = !(argv.disableMetrics || process.env.DISABLE_METRICS)
-  const metricsPort = argv.metricsPort || argv.mp || process.env.PORT || 8003
+  const metricsMa = multiaddr(argv.metricsMultiaddr || argv.ma || process.env.METRICSMA || '/ip4/127.0.0.1/tcp/8003')
+  const metricsAddr = metricsMa.nodeAddress()
 
   const libp2pMa = argv.libp2pMultiaddr || argv.lm || process.env.LIBP2PMA || '/ip6/::/tcp/5892/ws'
   const addresses = [multiaddr(libp2pMa)]
@@ -51,8 +52,8 @@ async function run () {
 
     menoetius.instrument(metricsServer)
 
-    metricsServer.listen(metricsPort, '127.0.0.1', () => {
-      console.log(`metrics server listening on ${metricsPort}`)
+    metricsServer.listen(metricsAddr.port, metricsAddr.address, () => {
+      console.log(`metrics server listening on ${metricsAddr.port}`)
     })
   }
 
