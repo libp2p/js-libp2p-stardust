@@ -24,5 +24,5 @@ EXPOSE 5892
 # Available overrides (defaults shown):
 #   --disableMetrics=false
 # Server logging can be enabled via the DEBUG environment variable:
-#   DEBUG=libp2p:stardust:server,libp2p:stardust:server:error
+#   DEBUG=libp2p:stardust:*
 CMD [ "node", "src/server/bin.js"]
