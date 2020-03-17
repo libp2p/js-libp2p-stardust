@@ -17,7 +17,7 @@ const argv = require('minimist')(process.argv.slice(2))
 async function run () {
   const metrics = !(argv.disableMetrics || process.env.DISABLE_METRICS)
   const metricsPort = argv.metricsPort || argv.mp || process.env.PORT || 8003
-  const libp2pMa = argv.libp2pMultiaddr || argv.lm || process.env.LIBP2PMA || `/ip6/::/tcp/5892/ws`
+  const libp2pMa = argv.libp2pMultiaddr || argv.lm || process.env.LIBP2PMA || '/ip6/::/tcp/5892/ws'
   const addresses = [multiaddr(libp2pMa)]
 
   let metricsServer

@@ -228,10 +228,10 @@ class Server {
       const message = await wrappedStream.readLP()
 
       // Try register
-      const { random128: random, peerID } = JoinInit.decode(message.slice())
+      try {
+        const { random128: random, peerID } = JoinInit.decode(message.slice())
 
-      if (random && peerID) {
-        try {
+        if (random && peerID) {
           this.metrics.joinsTotal.inc()
 
           const id = await PeerId.createFromJSON(peerID)
@@ -239,16 +239,16 @@ class Server {
           await this._register(random, id, wrappedStream, stream)
           this.addToNetwork(connection, wrappedStream, id)
           this.metrics.joinsSuccessTotal.inc()
-        } catch (error) {
-          log(error)
-          wrappedStream.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
 
-          // close the stream, no need to wait
-          stream.sink([])
-          this.metrics.joinsFailureTotal.inc()
-        } finally {
-          return // eslint-disable-line no-unsafe-finally
+          return
         }
+      } catch (error) {
+        log(error)
+        wrappedStream.writePB({ error: Error.E_GENERIC }, JoinVerify) // if anything fails, respond with generic error
+
+        // close the stream, no need to wait
+        stream.sink([])
+        this.metrics.joinsFailureTotal.inc()
       }
 
       // Try dial
