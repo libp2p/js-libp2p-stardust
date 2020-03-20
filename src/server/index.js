@@ -14,6 +14,7 @@ const delay = require('delay')
 const Wrap = require('it-pb-rpc')
 const pipe = require('it-pipe')
 const { int32BEDecode, int32BEEncode } = require('it-length-prefixed')
+const { sha5 } = require('../utils')
 const {
   JoinInit,
   JoinChallenge,
@@ -29,7 +30,16 @@ const {
 const multiaddr = require('multiaddr')
 const PeerId = require('peer-id')
 
-const sha5 = (data) => crypto.createHash('sha512').update(data).digest()
+const client = require('prom-client')
+
+const fake = {
+  gauge: {
+    set: () => { }
+  },
+  counter: {
+    inc: () => { }
+  }
+}
 
 const checkAckLoop = async (wrappedStream, onEnd) => {
   try {
@@ -58,6 +68,7 @@ class Server {
    * @param {Array<Encryption>} [options.encryption]
    * @param {number} [options.discoveryInterval]
    * @param {PeerInfo} [options.peerInfo]
+   * @param {bool} [options.hasMetrics]
    */
   constructor ({
     addresses = [multiaddr('/ip6/::/tcp/5892/ws')],
@@ -65,7 +76,8 @@ class Server {
     muxers = [Muxer],
     encryption = [Secio],
     discoveryInterval = 10 * 1000,
-    peerInfo
+    peerInfo,
+    hasMetrics = false
   } = {}) {
     this.peerAddr = addresses
     this.network = {}
@@ -78,6 +90,16 @@ class Server {
     this._encryption = encryption
     this._peerInfo = peerInfo
     this.discoveryIntervalTimeout = discoveryInterval
+
+    this.metrics = {
+      peerMetric: hasMetrics ? new client.Gauge({ name: 'stardust_peers', help: 'peers online now' }) : fake.gauge,
+      dialsSuccessTotal: hasMetrics ? new client.Counter({ name: 'stardust_dials_total_success', help: 'sucessfully completed dials since server started' }) : fake.counter,
+      dialsFailureTotal: hasMetrics ? new client.Counter({ name: 'stardust_dials_total_failure', help: 'failed dials since server started' }) : fake.counter,
+      dialsTotal: hasMetrics ? new client.Counter({ name: 'stardust_dials_total', help: 'all dials since server started' }) : fake.counter,
+      joinsSuccessTotal: hasMetrics ? new client.Counter({ name: 'stardust_joins_total_success', help: 'sucessfully completed joins since server started' }) : fake.counter,
+      joinsFailureTotal: hasMetrics ? new client.Counter({ name: 'stardust_joins_total_failure', help: 'failed joins since server started' }) : fake.counter,
+      joinsTotal: hasMetrics ? new client.Counter({ name: 'stardust_joins_total', help: 'all joins since server started' }) : fake.counter
+    }
   }
 
   removeFromNetwork (client) {
@@ -110,6 +132,8 @@ class Server {
     log('updating cached data')
     this.networkArray = Object.values(this.network)
     this._cachedDiscovery = this.networkArray.length ? { ids: this.networkArray.map(client => client.id._id) } : { ids: [] }
+    // Refresh metrics
+    this.metrics.peerMetric.set(this.networkArray.length)
   }
 
   /**
@@ -182,6 +206,8 @@ class Server {
    * Add a libp2p handler for stardust protocol.
    */
   async start () {
+    this.metrics.peerMetric.set(this.networkArray.length)
+
     this.libp2p = await Libp2p.create({
       peerInfo: this._peerInfo,
       modules: {
@@ -201,21 +227,20 @@ class Server {
       const wrappedStream = Wrap(stream, { lengthDecoder: int32BEDecode, lengthEncoder: int32BEEncode })
       const message = await wrappedStream.readLP()
 
+      // Try register
       try {
-        // Try register
         const { random128: random, peerID } = JoinInit.decode(message.slice())
 
         if (random && peerID) {
+          this.metrics.joinsTotal.inc()
+
           const id = await PeerId.createFromJSON(peerID)
 
           await this._register(random, id, wrappedStream, stream)
           this.addToNetwork(connection, wrappedStream, id)
-        } else {
-          const { target } = DialRequest.decode(message.slice())
-          const targetB58 = new PeerId(target).toB58String()
+          this.metrics.joinsSuccessTotal.inc()
 
-          log('dial from %s to %s', connection.localPeer.toB58String(), targetB58)
-          await this._dial(targetB58, wrappedStream, stream)
+          return
         }
       } catch (error) {
         log(error)
@@ -223,6 +248,26 @@ class Server {
 
         // close the stream, no need to wait
         stream.sink([])
+        this.metrics.joinsFailureTotal.inc()
+      }
+
+      // Try dial
+      try {
+        this.metrics.dialsTotal.inc()
+
+        const { target } = DialRequest.decode(message.slice())
+        const targetB58 = new PeerId(target).toB58String()
+
+        log('dial from %s to %s', connection.localPeer.toB58String(), targetB58)
+        await this._dial(targetB58, wrappedStream, stream)
+        this.metrics.dialsSuccessTotal.inc()
+      } catch (error) {
+        log(error)
+        wrappedStream.writePB({ error: Error.E_GENERIC }, DialResponse) // if anything fails, respond with generic error
+
+        // close the stream, no need to wait
+        stream.sink([])
+        this.metrics.dialsFailureTotal.inc()
       }
     }
 

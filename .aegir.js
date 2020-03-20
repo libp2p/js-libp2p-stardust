@@ -7,6 +7,7 @@ const IDJSON = require('./test/fixtures/peer-server.json')
 
 const Server = require('./src/server')
 let server
+let firstRun = true
 
 async function pre () {
   const peerId = await PeerId.createFromJSON(IDJSON)
@@ -14,8 +15,11 @@ async function pre () {
 
   server = new Server({
     discoveryInterval: 2e3,
-    peerInfo
+    peerInfo,
+    hasMetrics: firstRun
   })
+  if (firstRun) { firstRun = false }
+
   await server.start()
 }
 

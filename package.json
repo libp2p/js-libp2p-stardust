@@ -46,9 +46,12 @@
     "libp2p-utils": "^0.1.2",
     "libp2p-websockets": "^0.13.2",
     "mafmt": "^7.0.0",
+    "menoetius": "0.0.2",
+    "minimist": "^1.2.5",
     "multiaddr": "^7.2.1",
     "peer-id": "~0.13.6",
     "peer-info": "~0.17.1",
+    "prom-client": "^12.0.0",
     "protons": "^1.0.1"
   },
   "devDependencies": {
