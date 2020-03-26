@@ -2,20 +2,34 @@
 
 'use strict'
 
-// Usage: $0 [--libp2pMultiaddr <ma> ... <ma>] [--metricsMultiaddr <ma>] [--disableMetrics]
+// Usage: $0 [--peer-id <jsonFilePath>] [--libp2p-multiaddr <ma> ... <ma>] [--metrics-multiaddr <ma>] [--disable-metrics]
 
 /* eslint-disable no-console */
 
 const debug = require('debug')
 const log = debug('libp2p:stardust:server:bin')
 
+const fs = require('fs')
 const http = require('http')
 const menoetius = require('menoetius')
 
 const multiaddr = require('multiaddr')
+const PeerId = require('peer-id')
+const PeerInfo = require('peer-info')
 const Server = require('.')
 
-const argv = require('minimist')(process.argv.slice(2))
+const minimist = require('minimist')
+const argv = minimist(process.argv.slice(2), {
+  alias: {
+    'peer-id': 'peerId',
+    pid: 'peerId',
+    'libp2p-multiaddr': 'libp2pMultiaddr',
+    lm: 'libp2pMultiaddr',
+    'metrics-multiaddr': 'metricsMultiaddr',
+    mm: 'metricsMultiaddr',
+    'disable-metrics': 'disableMetrics'
+  }
+})
 
 async function run () {
   const metrics = !(argv.disableMetrics || process.env.DISABLE_METRICS)
@@ -24,6 +38,16 @@ async function run () {
 
   const libp2pMa = argv.libp2pMultiaddr || argv.lm || process.env.LIBP2PMA || '/ip6/::/tcp/5892/ws'
   const addresses = [multiaddr(libp2pMa)]
+
+  let peerInfo
+  if (argv.peerId) {
+    const peerData = fs.readFileSync(argv.peerId)
+    const peerId = await PeerId.createFromJSON(JSON.parse(peerData))
+    peerInfo = await PeerInfo.create(peerId)
+  } else {
+    log('You are using an automatically generated peer.')
+    log('If you want to keep the same address for the server you should provide a peerId with --peerId <jsonFilePath>')
+  }
 
   // Add remaining addresses
   if (argv.libp2pMultiaddr || argv.lm) {
@@ -34,7 +58,7 @@ async function run () {
 
   let metricsServer
 
-  const server = new Server({ addresses, hasMetrics: metrics })
+  const server = new Server({ addresses, hasMetrics: metrics, peerInfo })
   await server.start()
 
   console.log('server peerID: ', server.libp2p.peerInfo.id.toB58String())
