@@ -33,6 +33,9 @@ async function run () {
     const peerData = fs.readFileSync(argv.peerId)
     const peerId = await PeerId.createFromJSON(JSON.parse(peerData))
     peerInfo = await PeerInfo.create(peerId)
+  } else {
+    log('You are using an automatically generated peer. \n')
+    log('If you want to keep the same address for the server you should provide a peerId with --peerId <jsonFilePath>')
   }
 
   // Add remaining addresses
