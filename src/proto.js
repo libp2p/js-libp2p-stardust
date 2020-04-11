@@ -7,6 +7,7 @@ enum Error {
   OK                   = 0;
   E_RAND_LENGTH        = 100; // random128 has mismatching length
   E_INCORRECT_SOLUTION = 101;
+  E_TARGET_UNREACHABLE = 102;
   E_GENERIC            = 999; // something(TM) went wrong
 }
 
